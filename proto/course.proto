@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package course;
+
+service CourseService {
+  rpc GetCoursePrice (CoursePriceRequest) returns (CoursePriceResponse);
+  rpc ValidateCoupon (ValidateCouponRequest) returns (ValidateCouponResponse);
+  rpc GetLessonMeta (LessonMetaRequest) returns (LessonMetaResponse);
+  rpc GetCourseBasicInfo (CourseBasicInfoRequest) returns (CourseBasicInfoResponse);
+  rpc PublishCourse (PublishCourseRequest) returns (PublishCourseResponse);
+  rpc HideCourse (HideCourseRequest) returns (HideCourseResponse);
+}
+
+message CoursePriceRequest {
+  string course_id = 1;
+}
+
+message CoursePriceResponse {
+  string course_id = 1;
+  string title = 2;
+  string instructor_id = 3;
+  double base_price = 4;
+  double sale_price = 5;
+  string currency = 6;
+  string status = 7;
+}
+
+message ValidateCouponRequest {
+  string course_id = 1;
+  string code = 2;
+}
+
+message ValidateCouponResponse {
+  bool valid = 1;
+  string discount_type = 2;
+  double discount_value = 3;
+  string message = 4;
+}
+
+message LessonMetaRequest {
+  string lesson_id = 1;
+}
+
+message LessonMetaResponse {
+  string lesson_id = 1;
+  string course_id = 2;
+  string title = 3;
+  string video_url = 4;
+  int32 duration_sec = 5;
+  bool is_preview = 6;
+  repeated ResourceMeta resources = 7;
+}
+
+message ResourceMeta {
+  string resource_id = 1;
+  string name = 2;
+  string url = 3;
+  string type = 4;
+  string mime_type = 5;
+  int64 size_bytes = 6;
+}
+
+message CourseBasicInfoRequest {
+  string course_id = 1;
+}
+
+message CourseBasicInfoResponse {
+  string course_id = 1;
+  string title = 2;
+  string instructor_id = 3;
+  int32 total_lessons = 4;
+  string status = 5;
+}
+
+message PublishCourseRequest {
+  string course_id = 1;
+}
+
+message PublishCourseResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message HideCourseRequest {
+  string course_id = 1;
+}
+
+message HideCourseResponse {
+  bool success = 1;
+  string message = 2;
+}

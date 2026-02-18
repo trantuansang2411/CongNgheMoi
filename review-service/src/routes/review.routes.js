@@ -1,0 +1,10 @@
+const { Router } = require('express');
+const ctrl = require('../controllers/review.controller');
+const { authenticate } = require('../../shared/middleware/auth.middleware');
+const router = Router();
+router.post('/', authenticate, ctrl.createReview);
+router.put('/:reviewId', authenticate, ctrl.updateReview);
+router.delete('/:reviewId', authenticate, ctrl.deleteReview);
+router.get('/course/:courseId', ctrl.getReviewsByCourse);
+router.get('/course/:courseId/stats', ctrl.getCourseStats);
+module.exports = router;

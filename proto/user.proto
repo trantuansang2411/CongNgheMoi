@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package user;
+
+service UserService {
+  rpc GetUserProfile (GetUserProfileRequest) returns (GetUserProfileResponse);
+  rpc GetInstructorProfile (GetInstructorProfileRequest) returns (GetInstructorProfileResponse);
+  rpc UpdateInstructorStatus (UpdateInstructorStatusRequest) returns (UpdateInstructorStatusResponse);
+}
+
+message GetUserProfileRequest {
+  string user_id = 1;
+}
+
+message GetUserProfileResponse {
+  string user_id = 1;
+  string full_name = 2;
+  string avatar_url = 3;
+  string email = 4;
+  string bio = 5;
+}
+
+message GetInstructorProfileRequest {
+  string user_id = 1;
+}
+
+message GetInstructorProfileResponse {
+  string user_id = 1;
+  string display_name = 2;
+  string headline = 3;
+  string status = 4;
+}
+
+message UpdateInstructorStatusRequest {
+  string user_id = 1;
+  string status = 2;   // ACTIVE | BANNED
+}
+
+message UpdateInstructorStatusResponse {
+  bool success = 1;
+  string message = 2;
+}

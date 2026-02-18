@@ -1,0 +1,350 @@
+version: '3.8'
+
+services:
+  # =============================================
+  # INFRASTRUCTURE
+  # =============================================
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-postgres:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "check_port_connectivity" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # =============================================
+  # SERVICES
+  # =============================================
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    ports:
+      - "${API_GATEWAY_PORT:-3000}:3000"
+    env_file: .env
+    depends_on:
+      auth-service:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3000/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    ports:
+      - "${AUTH_SERVICE_PORT:-3001}:3001"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/auth_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3001/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    ports:
+      - "${USER_SERVICE_PORT:-3002}:3002"
+      - "${USER_GRPC_PORT:-50052}:50052"
+    env_file: .env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3002/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  course-service:
+    build:
+      context: .
+      dockerfile: course-service/Dockerfile
+    ports:
+      - "${COURSE_SERVICE_PORT:-3003}:3003"
+      - "${COURSE_GRPC_PORT:-50053}:50053"
+    env_file: .env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3003/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  search-service:
+    build:
+      context: .
+      dockerfile: search-service/Dockerfile
+    ports:
+      - "${SEARCH_SERVICE_PORT:-3004}:3004"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/search_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3004/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    ports:
+      - "${ORDER_SERVICE_PORT:-3005}:3005"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/order_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3005/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    ports:
+      - "${PAYMENT_SERVICE_PORT:-3006}:3006"
+      - "${PAYMENT_GRPC_PORT:-50056}:50056"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/payment_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3006/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  wallet-service:
+    build:
+      context: .
+      dockerfile: wallet-service/Dockerfile
+    ports:
+      - "${WALLET_SERVICE_PORT:-3007}:3007"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/wallet_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3007/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  learning-service:
+    build:
+      context: .
+      dockerfile: learning-service/Dockerfile
+    ports:
+      - "${LEARNING_SERVICE_PORT:-3008}:3008"
+      - "${LEARNING_GRPC_PORT:-50058}:50058"
+    env_file: .env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3008/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  certificate-service:
+    build:
+      context: .
+      dockerfile: certificate-service/Dockerfile
+    ports:
+      - "${CERTIFICATE_SERVICE_PORT:-3009}:3009"
+    env_file: .env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3009/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  review-service:
+    build:
+      context: .
+      dockerfile: review-service/Dockerfile
+    ports:
+      - "${REVIEW_SERVICE_PORT:-3010}:3010"
+    env_file: .env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3010/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-3011}:3011"
+    env_file: .env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3011/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  admin-service:
+    build:
+      context: .
+      dockerfile: admin-service/Dockerfile
+    ports:
+      - "${ADMIN_SERVICE_PORT:-3012}:3012"
+    env_file: .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3012/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
+  rabbitmq_data:
+
+
+networks:
+  app-network:
+    driver: bridge

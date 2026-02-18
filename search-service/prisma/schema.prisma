@@ -1,0 +1,24 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model CourseIndex {
+  courseId        String    @id @map("course_id") @db.Uuid
+  title          String
+  instructorId   String?   @map("instructor_id")
+  instructorName String?   @map("instructor_name")
+  topicId        String?   @map("topic_id")
+  price          Decimal   @db.Decimal(12, 0)
+  ratingAvg      Decimal   @default(0) @map("rating_avg") @db.Decimal(3, 2)
+  ratingCount    Int       @default(0) @map("rating_count")
+  publishedAt    DateTime? @map("published_at") @db.Timestamptz()
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("course_index")
+}

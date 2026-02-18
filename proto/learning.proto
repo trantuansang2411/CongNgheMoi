@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package learning;
+
+service LearningService {
+  rpc HasEnrollment (HasEnrollmentRequest) returns (HasEnrollmentResponse);
+  rpc GetStudentsByCourse (StudentsByCourseRequest) returns (StudentsByCourseResponse);
+}
+
+message HasEnrollmentRequest {
+  string student_id = 1;
+  string course_id = 2;
+}
+
+message HasEnrollmentResponse {
+  bool enrolled = 1;
+  string enrollment_id = 2;
+  string status = 3;
+}
+
+message StudentsByCourseRequest {
+  string course_id = 1;
+  string instructor_id = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}
+
+message StudentInfo {
+  string student_id = 1;
+  string enrolled_at = 2;
+  int32 progress_percent = 3;
+}
+
+message StudentsByCourseResponse {
+  repeated StudentInfo students = 1;
+  int32 total = 2;
+}

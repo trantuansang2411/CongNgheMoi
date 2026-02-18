@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package payment;
+
+service PaymentService {
+  rpc CreatePaymentIntent (CreatePaymentIntentRequest) returns (CreatePaymentIntentResponse);
+  rpc GetPaymentStatus (GetPaymentStatusRequest) returns (GetPaymentStatusResponse);
+}
+
+message CreatePaymentIntentRequest {
+  string type = 1;           // TOPUP | ORDER_PAY
+  string student_id = 2;
+  string order_id = 3;
+  double amount = 4;
+  string currency = 5;
+  string provider = 6;       // MOCK | STRIPE | MOMO
+  string idempotency_key = 7;
+}
+
+message CreatePaymentIntentResponse {
+  string payment_intent_id = 1;
+  string status = 2;
+  string provider_intent_id = 3;
+  string checkout_url = 4;    // URL to redirect user for payment
+}
+
+message GetPaymentStatusRequest {
+  string payment_intent_id = 1;
+}
+
+message GetPaymentStatusResponse {
+  string payment_intent_id = 1;
+  string status = 2;
+  double amount = 3;
+  string order_id = 4;
+}
