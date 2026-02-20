@@ -12,16 +12,20 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
+const ms = require('ms'); // chuyển đổi chuỗi thời gian ví dụ '7d', '24h', '30m' thành milliseconds
+const REFRESH_TOKEN_MS = ms(JWT_REFRESH_EXPIRES_IN);
+
 function generateTokens(account, roles) {
     const payload = {
         sub: account.id,
         email: account.email,
         roles,
     };
-
+    // payload là thông tin của user sẽ được mã hóa trong access token
     const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    // jwt được ký với JWT_SECRET để mã hoá và có thời gian hết hạn là JWT_EXPIRES_IN
     const refreshToken = crypto.randomBytes(64).toString('hex');
-
+    // randomBytes(64) tạo ra 64 byte ngẫu nhiên, toString('hex') chuyển sang chuỗi hex
     return { accessToken, refreshToken };
 }
 
@@ -30,19 +34,19 @@ function getRoleNames(account) {
 }
 
 async function register({ email, password }) {
-    const existing = await authRepo.findAccountByEmail(email);
+    const existing = await authRepo.findAccountByEmail(email); // tìm tài khoản theo email
     if (existing) {
-        throw new ConflictError('Email already registered');
+        throw new ConflictError('Email already registered'); // nếu tài khoản đã tồn tại thì ném ra lỗi
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
-    const account = await authRepo.createAccount({ email, passwordHash });
-    const roles = getRoleNames(account);
-    const { accessToken, refreshToken } = generateTokens(account, roles);
+    const passwordHash = await bcrypt.hash(password, 12); // băm mật khẩu với độ phức tạp 12 (bcrypt thực hiện 4096 lần xử lý)
+    const account = await authRepo.createAccount({ email, passwordHash }); // tạo tài khoản mới
+    const roles = getRoleNames(account); // lấy danh sách vai trò của tài khoản
+    const { accessToken, refreshToken } = generateTokens(account, roles); // tạo access token và refresh token
 
-    // Store refresh token
+    // Lưu refresh token
     const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_MS);
     await authRepo.createRefreshToken({ accountId: account.id, tokenHash: refreshTokenHash, expiresAt });
 
     logger.info(`User registered: ${email} with roles: ${roles.join(', ')}`);
@@ -77,7 +81,7 @@ async function login({ email, password }) {
     const { accessToken, refreshToken } = generateTokens(account, roles);
 
     const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_MS);
     await authRepo.createRefreshToken({ accountId: account.id, tokenHash: refreshTokenHash, expiresAt });
 
     logger.info(`User logged in: ${email}`);
@@ -120,7 +124,7 @@ async function googleLogin({ idToken }) {
     const { accessToken, refreshToken } = generateTokens(account, roles);
 
     const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_MS);
     await authRepo.createRefreshToken({ accountId: account.id, tokenHash: refreshTokenHash, expiresAt });
 
     logger.info(`Google user logged in: ${email}`);
@@ -152,7 +156,7 @@ async function refreshAccessToken(refreshTokenStr) {
     const { accessToken, refreshToken: newRefreshToken } = generateTokens(account, roles);
 
     const newHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_MS);
     await authRepo.createRefreshToken({ accountId: account.id, tokenHash: newHash, expiresAt });
 
     return { accessToken, refreshToken: newRefreshToken };

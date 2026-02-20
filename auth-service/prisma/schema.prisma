@@ -8,28 +8,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Cú pháp cơ bản của Prisma
+// model <TênModel> {
+//   <tênThuộcTính>  <KiểuDữLiệu>  <ThuộcTínhMởRộng>
+// }
+// model: định nghĩa một bảng
+// @id: định nghĩa khóa chính
+// @default: định nghĩa giá trị mặc định
+// @map: định nghĩa tên bảng trong cơ sở dữ liệu
+// @db: định nghĩa kiểu dữ liệu trong cơ sở dữ liệu ví dụ: @db.Uuid nếu không có @db thì sẽ lưu là text trong postgresql vì default của string là text
+// @unique: định nghĩa khóa duy nhất
+// @relation: định nghĩa quan hệ giữa các bảng
+// @index: định nghĩa chỉ mục
+
 model Account {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique @db.VarChar(255)
   passwordHash String?  @map("password_hash")
   provider     String   @default("LOCAL") @db.VarChar(16) // LOCAL | GOOGLE
-  providerId   String?  @map("provider_id")
+  providerId   String?  @map("provider_id") // việc sài @map(("provider_id")) là để đặt tên cột trong DB là provider_id thay vì providerId(là sử dụng trong code khi gọi ra)
   status       String   @default("ACTIVE") @db.VarChar(16) // ACTIVE | LOCKED | BANNED
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
-  accountRoles  AccountRole[]
-  refreshTokens RefreshToken[]
-  passwordResetTokens PasswordResetToken[]
+  accountRoles  AccountRole[] // Một User có nhiều Role
+  refreshTokens RefreshToken[] // Một User có nhiều RefreshToken Dấu [] = mảng = quan hệ nhiều.
+  passwordResetTokens PasswordResetToken[] // Một User có nhiều PasswordResetToken
 
-  @@map("accounts")
+  @@map("accounts") // @@map("accounts") là để đặt tên bảng trong DB là accounts thay vì Account(là sử dụng trong code khi gọi ra)
 }
 
 model Role {
   id   String @id @default(uuid()) @db.Uuid
   name String @unique @db.VarChar(32) // CUSTOMER | STUDENT | INSTRUCTOR | ADMIN
 
-  accountRoles AccountRole[]
+  accountRoles AccountRole[] // Một Role có nhiều User
 
   @@map("roles")
 }
@@ -38,7 +51,7 @@ model AccountRole {
   accountId String @map("account_id") @db.Uuid
   roleId    String @map("role_id") @db.Uuid
 
-  account Account @relation(fields: [accountId], references: [id])
+  account Account @relation(fields: [accountId], references: [id]) // Đây mới là nơi tạo: Foreign key, Quan hệ thực sự trong DB, Khi bạn create từ phía Account, Khi bạn create từ phía Account Nên nó inject accountId giúp bạn.
   role    Role    @relation(fields: [roleId], references: [id])
 
   @@id([accountId, roleId])

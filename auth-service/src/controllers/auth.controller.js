@@ -5,14 +5,14 @@ async function register(req, res, next) {
         const result = await authService.register(req.body);
         res.status(201).json({ success: true, data: result });
     } catch (err) {
-        next(err);
+        next(err); // khi mà next(err) thì err sẽ được chuyển sang middleware error để xử lý nghĩa là Nhảy thẳng tới middleware có đủ 4 tham số: (err, req, res, next)
     }
 }
 
 async function login(req, res, next) {
     try {
         const result = await authService.login(req.body);
-        res.json({ success: true, data: result });
+        res.json({ success: true, data: result }); // Nếu không gọi res.status() thì Express mặc định: 200 OK
     } catch (err) {
         next(err);
     }

@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 
 const prisma = new PrismaClient();
 
+// Hardcoded role IDs
 const ROLE_IDS = {
     STUDENT: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12',
     INSTRUCTOR: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13',
@@ -18,10 +19,13 @@ async function createAccount({ email, passwordHash, provider = 'LOCAL', provider
             provider,
             providerId,
             accountRoles: {
-                create: { roleId: ROLE_IDS.STUDENT },
+                create: { roleId: ROLE_IDS.STUDENT }, // Tạo 1 record trong bảng trung gian account_roles
             },
         },
         include: { accountRoles: { include: { role: true } } },
+        /*Lấy account vừa tạo
+        Join sang accountRoles
+        Trong accountRoles lại join sang role*/
     });
 }
 

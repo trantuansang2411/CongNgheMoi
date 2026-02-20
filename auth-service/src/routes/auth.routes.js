@@ -8,7 +8,7 @@ const {
     refreshTokenSchema,
     forgotPasswordSchema,
     resetPasswordSchema,
-} = require('../validators/auth.validator');
+} = require('../middleware/auth.validator');
 
 const router = Router();
 
