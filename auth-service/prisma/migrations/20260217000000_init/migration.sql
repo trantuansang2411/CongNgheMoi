@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS "refresh_tokens" (
 );
 
 CREATE INDEX IF NOT EXISTS "refresh_tokens_account_id_idx" ON "refresh_tokens"("account_id");
+CREATE INDEX IF NOT EXISTS "refresh_tokens_token_hash_idx" ON "refresh_tokens"("token_hash");
 
 CREATE TABLE IF NOT EXISTS "password_reset_tokens" (
     "id" UUID NOT NULL,
@@ -51,6 +52,7 @@ CREATE TABLE IF NOT EXISTS "password_reset_tokens" (
 );
 
 CREATE INDEX IF NOT EXISTS "password_reset_tokens_account_id_idx" ON "password_reset_tokens"("account_id");
+CREATE INDEX IF NOT EXISTS "password_reset_tokens_token_hash_idx" ON "password_reset_tokens"("token_hash");
 
 -- Foreign Keys
 ALTER TABLE "account_roles" ADD CONSTRAINT "account_roles_account_id_fkey" FOREIGN KEY ("account_id") REFERENCES "accounts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -27,7 +27,7 @@ model Account {
   passwordHash String?  @map("password_hash")
   provider     String   @default("LOCAL") @db.VarChar(16) // LOCAL | GOOGLE
   providerId   String?  @map("provider_id") // việc sài @map(("provider_id")) là để đặt tên cột trong DB là provider_id thay vì providerId(là sử dụng trong code khi gọi ra)
-  status       String   @default("ACTIVE") @db.VarChar(16) // ACTIVE | LOCKED | BANNED
+  status       String   @default("ACTIVE") @db.VarChar(16) // ACTIVE | LOCKED | BANNED // LOCKED là khi login sai nhiều lần mình sẽ lock bao nhiêu phút đó
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
@@ -40,7 +40,7 @@ model Account {
 
 model Role {
   id   String @id @default(uuid()) @db.Uuid
-  name String @unique @db.VarChar(32) // CUSTOMER | STUDENT | INSTRUCTOR | ADMIN
+  name String @unique @db.VarChar(32) //  STUDENT | INSTRUCTOR | ADMIN
 
   accountRoles AccountRole[] // Một Role có nhiều User
 
@@ -69,6 +69,7 @@ model RefreshToken {
   account Account @relation(fields: [accountId], references: [id])
 
   @@index([accountId])
+  @@index([tokenHash])
   @@map("refresh_tokens")
 }
 
@@ -83,5 +84,6 @@ model PasswordResetToken {
   account Account @relation(fields: [accountId], references: [id])
 
   @@index([accountId])
+  @@index([tokenHash])
   @@map("password_reset_tokens")
 }

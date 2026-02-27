@@ -27,4 +27,14 @@ async function start() {
     }
 }
 
+async function shutdown(signal) {
+    logger.info(`${signal} received. Shutting down Course Service...`);
+    await rabbitmq.close();
+    await mongoose.disconnect();
+    process.exit(0);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
 start();

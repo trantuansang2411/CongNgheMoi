@@ -30,4 +30,15 @@ async function start() {
         process.exit(1);
     }
 }
+
+async function shutdown(signal) {
+    logger.info(`${signal} received. Shutting down Review Service...`);
+    await rabbitmq.close();
+    await mongoose.disconnect();
+    process.exit(0);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
 start();

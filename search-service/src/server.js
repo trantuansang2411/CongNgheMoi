@@ -41,4 +41,14 @@ async function start() {
         process.exit(1);
     }
 }
+
+async function shutdown(signal) {
+    logger.info(`${signal} received. Shutting down Search Service...`);
+    await rabbitmq.close();
+    process.exit(0);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
 start();

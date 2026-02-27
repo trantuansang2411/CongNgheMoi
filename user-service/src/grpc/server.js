@@ -7,11 +7,20 @@ const logger = require('../../shared/utils/logger');
 const PROTO_PATH = path.join(__dirname, '../../proto/user.proto');
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-    keepCase: false,
-    longs: String,
-    enums: String,
-    defaults: true,
+    keepCase: false, //proto field user_id sẽ được convert sang camelCase userId khi bạn đọc call.request
+    longs: String, // nếu có int64/uint64 thì sẽ convert thành string (JS không an toàn với số 64-bit)
+    enums: String, // enum (nếu có) sẽ ra string.
+    defaults: true, // field không có vẫn có default (string -> "", bool -> false…)
     oneofs: true,
+    /*
+    Tại sao cần oneof?
+    Vì đôi khi API có nhiều cách truyền input.
+    Ví dụ:
+    Login bằng email
+    Hoặc login bằng phone
+    Hoặc login bằng username
+    Bạn không muốn client gửi cả 3 cùng lúc.
+    */
 });
 
 const userProto = grpc.loadPackageDefinition(packageDefinition).user;
@@ -57,12 +66,59 @@ async function updateInstructorStatus(call, callback) {
     }
 }
 
+async function reviewApplication(call, callback) {
+    try {
+        const { applicationId, status, reviewerId } = call.request;
+
+        // Admin truyền userId, cần tìm application PENDING của user đó
+        const application = await userService.getApplication(applicationId);
+        const realId = application._id.toString();
+
+        const result = await userService.reviewApplication(realId, status, reviewerId);
+        callback(null, {
+            success: true,
+            message: `Application ${status.toLowerCase()}`,
+            userId: result.userId,
+        });
+    } catch (err) {
+        logger.error('gRPC ReviewApplication error:', err.message);
+        const code = err.statusCode === 404 ? grpc.status.NOT_FOUND : grpc.status.INTERNAL;
+        callback({ code, message: err.message });
+    }
+}
+
+async function listApplications(call, callback) {
+    try {
+        const { status, page, limit } = call.request;
+        const filter = status ? { status } : {};
+        const result = await userService.listApplications(filter, page || 1, limit || 20);
+        callback(null, {
+            applications: result.items.map(app => ({
+                id: app._id?.toString() || app.id,
+                userId: app.userId,
+                status: app.status,
+                fullName: app.data?.fullName || '',
+                headline: app.data?.headline || '',
+                createdAt: app.createdAt?.toISOString() || '',
+            })),
+            total: result.total,
+            page: result.page,
+            limit: result.limit,
+        });
+    } catch (err) {
+        logger.error('gRPC ListApplications error:', err.message);
+        callback({ code: grpc.status.INTERNAL, message: err.message });
+    }
+}
+
 function startGrpcServer(port) {
     const server = new grpc.Server();
     server.addService(userProto.UserService.service, {
         getUserProfile,
         getInstructorProfile,
         updateInstructorStatus,
+        reviewApplication,
+        listApplications,
     });
 
     server.bindAsync(`0.0.0.0:${port}`, grpc.ServerCredentials.createInsecure(), (err, boundPort) => {
@@ -77,3 +133,4 @@ function startGrpcServer(port) {
 }
 
 module.exports = { startGrpcServer };
+

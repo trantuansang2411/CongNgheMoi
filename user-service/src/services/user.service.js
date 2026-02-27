@@ -3,10 +3,22 @@ const logger = require('../../shared/utils/logger');
 const { NotFoundError, BadRequestError, ConflictError } = require('../../shared/utils/errors');
 
 async function getProfile(userId) {
-    let profile = await userRepo.findProfileByUserId(userId);
+    const profile = await userRepo.findProfileByUserId(userId);
     if (!profile) {
-        profile = await userRepo.createProfile({ userId });
+        throw new NotFoundError('Profile not found');
     }
+    return profile;
+}
+
+// Được gọi từ RabbitMQ event handler khi Auth Service tạo account mới
+async function createProfileFromEvent({ userId, email }) {
+    const existing = await userRepo.findProfileByUserId(userId);
+    if (existing) {
+        logger.warn(`Profile already exists for user: ${userId}`);
+        return existing;
+    }
+    const profile = await userRepo.createProfile({ userId, fullName: email.split('@')[0] });
+    logger.info(`Profile created from event for user: ${userId}`);
     return profile;
 }
 
@@ -88,6 +100,7 @@ async function updateInstructorStatus(userId, status) {
 
 module.exports = {
     getProfile,
+    createProfileFromEvent,
     updateProfile,
     applyInstructor,
     getApplication,

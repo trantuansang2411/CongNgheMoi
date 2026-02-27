@@ -4,6 +4,7 @@ const { authenticate, authorize } = require('../../shared/middleware/auth.middle
 const router = Router();
 
 router.use(authenticate, authorize('ADMIN'));
+router.get('/applications', ctrl.listApplications);
 router.get('/courses/:courseId', ctrl.getCourseInfo);
 router.post('/courses/:courseId/publish', ctrl.publishCourse);
 router.post('/courses/:courseId/hide', ctrl.hideCourse);

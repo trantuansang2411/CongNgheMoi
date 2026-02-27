@@ -3,11 +3,12 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const authRepo = require('../repositories/auth.repo');
+const { publishEvent } = require('../../shared/events/rabbitmq');
 const logger = require('../../shared/utils/logger');
-const { BadRequestError, UnauthorizedError, NotFoundError, ConflictError } = require('../../shared/utils/errors');
+const { BadRequestError, UnauthorizedError, ConflictError } = require('../../shared/utils/errors');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '5m';
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
@@ -50,6 +51,9 @@ async function register({ email, password }) {
     await authRepo.createRefreshToken({ accountId: account.id, tokenHash: refreshTokenHash, expiresAt });
 
     logger.info(`User registered: ${email} with roles: ${roles.join(', ')}`);
+
+    // Publish event để User Service tạo profile
+    await publishEvent('user.created', { userId: account.id, email: account.email, roles });
 
     return {
         user: { id: account.id, email: account.email, roles },
@@ -112,6 +116,8 @@ async function googleLogin({ idToken }) {
             providerId: googleId,
         });
         logger.info(`Google user auto-registered: ${email}`);
+        const newRoles = getRoleNames(account);
+        await publishEvent('user.created', { userId: account.id, email: account.email, roles: newRoles });
     } else if (account.provider !== 'GOOGLE') {
         throw new ConflictError('Email already registered with password. Please login with email/password.');
     }

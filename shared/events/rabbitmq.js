@@ -51,46 +51,76 @@ async function publishEvent(routingKey, data) {
   }
 }
 
-async function subscribe(serviceName, routingKey, handler) {
+async function subscribe(serviceName, routingKey, handler, options = {}) {
+  const MAX_RETRIES = options.maxRetries || 3;
+  const RETRY_TTL = options.retryTtl || 10000; // 10s delay giữa các lần retry
+
   try {
     if (!channel) {
       throw new Error('RabbitMQ channel not initialized');
     }
 
     const queueName = `${serviceName}.${routingKey}`;
+    const retryQueueName = `${queueName}.retry`;
     const dlqName = `${queueName}.dlq`;
 
-    // Dead Letter Queue
+    // 1. Final DLQ — message chết hẳn, chờ dev xử lý thủ công
     await channel.assertQueue(dlqName, { durable: true });
 
-    // Main queue with DLQ
-    await channel.assertQueue(queueName, {
+    // 2. Retry Queue — không có consumer, chỉ giữ message TTL giây
+    //    Khi TTL hết → dead-letter quay về events exchange → main queue
+    await channel.assertQueue(retryQueueName, {
       durable: true,
       arguments: {
-        'x-dead-letter-exchange': '',
-        'x-dead-letter-routing-key': dlqName,
+        'x-message-ttl': RETRY_TTL, // 10s delay giữa các lần retry
+        'x-dead-letter-exchange': EXCHANGE_NAME, // Quay về events exchange
+        'x-dead-letter-routing-key': routingKey, // Quay về main queue
       },
     });
 
-    await channel.bindQueue(queueName, EXCHANGE_NAME, routingKey);
-    await channel.prefetch(1);
+    // 3. Main Queue — consumer xử lý ở đây
+    //    Khi nack(requeue=false) → dead-letter vào retry queue
+    await channel.assertQueue(queueName, {
+      durable: true,
+      arguments: {
+        'x-dead-letter-exchange': '', // Không quay lại events exchange
+        'x-dead-letter-routing-key': retryQueueName, // Quay về retry queue
+      },
+    });
+
+    await channel.bindQueue(queueName, EXCHANGE_NAME, routingKey); // Bind queue với exchange và routing key nghĩa là queue sẽ nhận message từ exchange với routing key để so sánh routing key để đưa vào queue
+    await channel.prefetch(1); // Chỉ xử lý 1 message tại thời điểm
 
     channel.consume(queueName, async (msg) => {
       if (!msg) return;
 
       try {
-        const content = JSON.parse(msg.content.toString());
+        const content = JSON.parse(msg.content.toString()); // chuyển dạng nhị phân thành string rồi chuyển qua dạng json 
         logger.info(`Event received: ${routingKey}`, { queue: queueName });
-        await handler(content);
-        channel.ack(msg);
+        await handler(content); // là việc service lấy message trong queue ra để xử lý
+        channel.ack(msg); // ack là sẽ xoá message trong queue nghĩa là service đã làm rồi hãy xoá message trong queue đi
       } catch (err) {
         logger.error(`Error processing event ${routingKey}:`, err.message);
-        // Reject and send to DLQ after 3 retries
-        const retryCount = (msg.properties.headers && msg.properties.headers['x-retry-count']) || 0;
-        if (retryCount < 3) {
-          channel.nack(msg, false, true);
+
+        // RabbitMQ tự thêm x-death header mỗi lần dead-letter
+        // Phải lọc đúng record: rejected ở main queue (không phải expired ở retry queue)
+        const deaths = msg.properties.headers?.['x-death'] || []; // coi là header của message có phải là x-death không
+        const mainReject = deaths.find(d => d.queue === queueName && d.reason === 'rejected'); // tìm record rejected ở main queue
+        const retryCount = mainReject?.count || 0; // đếm số lần retry
+
+        if (retryCount >= MAX_RETRIES) { // nếu quá số lần retry thì gửi vào Final DLQ rồi mới ack (tránh mất message)
+          channel.sendToQueue(dlqName, msg.content, {
+            persistent: true,
+            contentType: msg.properties.contentType || 'application/json',
+            contentEncoding: msg.properties.contentEncoding,
+            headers: msg.properties.headers,
+          });
+          channel.ack(msg);
+          logger.error(`Event ${routingKey} sent to DLQ after ${retryCount} retries`);
         } else {
-          channel.nack(msg, false, false); // Send to DLQ
+          // nack → dead-letter → retry queue (chờ TTL) → quay lại main queue
+          channel.nack(msg, false, false);
+          logger.warn(`Retrying event ${routingKey} in ${RETRY_TTL / 1000}s (attempt ${retryCount + 1}/${MAX_RETRIES})`);
         }
       }
     });

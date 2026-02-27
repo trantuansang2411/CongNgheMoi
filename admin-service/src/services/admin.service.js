@@ -20,27 +20,41 @@ async function getCourseInfo(courseId) {
     return grpcClients.getCourseBasicInfo({ courseId });
 }
 
-async function approveInstructor(userId) {
-    // Add INSTRUCTOR role via auth-service internal API
+async function listApplications(status, page, limit) {
+    const result = await grpcClients.listApplications({ status: status || '', page: page || 1, limit: limit || 20 });
+    return result;
+}
+
+async function approveInstructor(userId, reviewerId) {
+    // 1. Duyệt đơn trong User Service (tạo InstructorProfile)
+    const result = await grpcClients.reviewApplication({
+        applicationId: userId, // dùng userId để tìm application
+        status: 'APPROVED',
+        reviewerId,
+    });
+
+    // 2. Thêm role INSTRUCTOR qua Auth Service internal API
     const response = await fetch(`${AUTH_SERVICE_URL}/internal/roles/add`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'x-internal-api-key': INTERNAL_API_KEY,
         },
-        body: JSON.stringify({ accountId: userId, role: 'INSTRUCTOR' }),
+        body: JSON.stringify({ accountId: result.userId || userId, role: 'INSTRUCTOR' }),
     });
     const data = await response.json();
-    if (!data.success) throw new Error(data.error || 'Failed to approve instructor');
+    if (!data.success) throw new Error(data.error || 'Failed to add INSTRUCTOR role');
 
-    // Update instructor status in user-service
-    await grpcClients.updateInstructorStatus({ userId, status: 'ACTIVE' });
     logger.info(`Admin: approved instructor ${userId}`);
     return { message: `Instructor ${userId} approved successfully` };
 }
 
-async function rejectInstructor(userId) {
-    await grpcClients.updateInstructorStatus({ userId, status: 'REJECTED' });
+async function rejectInstructor(userId, reviewerId) {
+    await grpcClients.reviewApplication({
+        applicationId: userId,
+        status: 'REJECTED',
+        reviewerId,
+    });
     logger.info(`Admin: rejected instructor application ${userId}`);
     return { message: `Instructor application ${userId} rejected` };
 }
@@ -57,5 +71,6 @@ async function unbanInstructor(userId) {
     return result;
 }
 
-module.exports = { publishCourse, hideCourse, getCourseInfo, approveInstructor, rejectInstructor, banInstructor, unbanInstructor };
+module.exports = { publishCourse, hideCourse, getCourseInfo, listApplications, approveInstructor, rejectInstructor, banInstructor, unbanInstructor };
+
 

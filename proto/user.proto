@@ -1,4 +1,4 @@
-syntax = "proto3";
+syntax = "proto3"; 
 
 package user;
 
@@ -6,6 +6,8 @@ service UserService {
   rpc GetUserProfile (GetUserProfileRequest) returns (GetUserProfileResponse);
   rpc GetInstructorProfile (GetInstructorProfileRequest) returns (GetInstructorProfileResponse);
   rpc UpdateInstructorStatus (UpdateInstructorStatusRequest) returns (UpdateInstructorStatusResponse);
+  rpc ReviewApplication (ReviewApplicationRequest) returns (ReviewApplicationResponse);
+  rpc ListApplications (ListApplicationsRequest) returns (ListApplicationsResponse);
 }
 
 message GetUserProfileRequest {
@@ -40,3 +42,38 @@ message UpdateInstructorStatusResponse {
   bool success = 1;
   string message = 2;
 }
+
+message ReviewApplicationRequest {
+  string application_id = 1;
+  string status = 2;   // APPROVED | REJECTED
+  string reviewer_id = 3;
+}
+
+message ReviewApplicationResponse {
+  bool success = 1;
+  string message = 2;
+  string user_id = 3;
+}
+
+message ListApplicationsRequest {
+  string status = 1;   // PENDING | APPROVED | REJECTED (optional filter)
+  int32 page = 2;
+  int32 limit = 3;
+}
+
+message ApplicationItem {
+  string id = 1;
+  string user_id = 2;
+  string status = 3;
+  string full_name = 4;
+  string headline = 5;
+  string created_at = 6;
+}
+
+message ListApplicationsResponse {
+  repeated ApplicationItem applications = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}
+

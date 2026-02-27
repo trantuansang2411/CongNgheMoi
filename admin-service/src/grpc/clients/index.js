@@ -30,4 +30,7 @@ module.exports = {
     getCourseBasicInfo: promisify(courseClient, 'getCourseBasicInfo'),
     getUserProfile: promisify(userClient, 'getUserProfile'),
     updateInstructorStatus: promisify(userClient, 'updateInstructorStatus'),
+    reviewApplication: promisify(userClient, 'reviewApplication'),
+    listApplications: promisify(userClient, 'listApplications'),
 };
+
