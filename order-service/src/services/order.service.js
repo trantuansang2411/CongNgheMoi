@@ -24,25 +24,46 @@ async function removeFromCart(studentId, courseId) {
 }
 
 // ========== CHECKOUT ==========
-async function checkout(studentId, { couponCode, paymentProvider = 'MOCK' }) {
+async function checkout(studentId, { couponCode, couponCourseId, paymentProvider = 'MOCK' }) {
     const cart = await orderRepo.getCart(studentId);
     if (!cart.items || cart.items.length === 0) throw new BadRequestError('Cart is empty');
 
-    let discountAmount = 0;
-    // TODO: validate coupon via course-service gRPC if couponCode provided
-
-    const items = cart.items.map(item => ({
-        courseId: item.courseId,
-        instructorId: item.instructorId,
-        titleSnapshot: item.titleSnapshot,
-        originalPrice: Number(item.priceSnapshot),
-        finalPrice: Number(item.priceSnapshot),
+    // Lấy giá thật từ course-service cho từng item
+    const items = await Promise.all(cart.items.map(async (item) => {
+        const priceInfo = await grpcClients.getCoursePrice({ courseId: item.courseId });
+        const originalPrice = Number(priceInfo.salePrice || priceInfo.basePrice);
+        return {
+            courseId: item.courseId,
+            instructorId: item.instructorId || priceInfo.instructorId,
+            titleSnapshot: item.titleSnapshot || priceInfo.title,
+            originalPrice,
+            finalPrice: originalPrice,
+        };
     }));
 
-    const total = items.reduce((sum, i) => sum + i.finalPrice, 0) - discountAmount;
+    // Validate & áp dụng coupon cho course cụ thể
+    let discountAmount = 0;
+    if (couponCode && couponCourseId) {
+        const coupon = await grpcClients.validateCoupon({ courseId: couponCourseId, code: couponCode });
+        if (!coupon.valid) throw new BadRequestError(coupon.message || 'Invalid coupon');
+
+        const targetItem = items.find(i => i.courseId === couponCourseId);
+        if (targetItem) {
+            if (coupon.discountType === 'PERCENT') {
+                discountAmount = Math.round(targetItem.originalPrice * Number(coupon.discountValue) / 100);
+            } else {
+                discountAmount = Number(coupon.discountValue);
+            }
+            // Đảm bảo discount không vượt quá giá course
+            discountAmount = Math.min(discountAmount, targetItem.originalPrice);
+            targetItem.finalPrice = targetItem.originalPrice - discountAmount;
+        }
+    }
+
+    const total = items.reduce((sum, i) => sum + i.finalPrice, 0);
 
     const order = await orderRepo.createOrder({
-        studentId, total, couponCode, discountAmount: discountAmount || null,
+        studentId, total, couponCode: couponCode || null, discountAmount: discountAmount || null,
         items,
     });
 

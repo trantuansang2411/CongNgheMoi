@@ -11,12 +11,12 @@ async function createCourse(data) {
     return Course.create(data);
 }
 
-async function findByCourseId(courseId) {
+async function findByCourseId(courseId) { //gRPC
     return Course.findOne({ courseId, deletedAt: null });
 }
 
 async function findByInstructor(instructorId, page = 1, limit = 20) {
-    const skip = (page - 1) * limit;
+    const skip = (page - 1) * limit; // Tính số lượng phần tử cần bỏ qua
     const [items, total] = await Promise.all([
         Course.find({ instructorId, deletedAt: null }).sort({ createdAt: -1 }).skip(skip).limit(limit),
         Course.countDocuments({ instructorId, deletedAt: null }),
@@ -25,7 +25,7 @@ async function findByInstructor(instructorId, page = 1, limit = 20) {
 }
 
 async function findPublished(page = 1, limit = 20) {
-    const skip = (page - 1) * limit;
+    const skip = (page - 1) * limit; // Tính số lượng phần tử cần bỏ qua
     const [items, total] = await Promise.all([
         Course.find({ status: 'PUBLISHED', deletedAt: null }).sort({ publishedAt: -1 }).skip(skip).limit(limit),
         Course.countDocuments({ status: 'PUBLISHED', deletedAt: null }),
@@ -34,16 +34,18 @@ async function findPublished(page = 1, limit = 20) {
 }
 
 async function updateCourse(courseId, data) {
-    return Course.findOneAndUpdate({ courseId, deletedAt: null }, data, { new: true });
+    return Course.findOneAndUpdate({ courseId, deletedAt: null }, // filter
+        data, //update
+        { new: true }); //options có new true thì sẽ trả về dữ liệu mới update nếu không có sẽ là dữ liệu cũ
 }
 
 async function softDeleteCourse(courseId) {
     return Course.findOneAndUpdate({ courseId }, { deletedAt: new Date() }, { new: true });
 }
 
-async function updateStatus(courseId, status, extra = {}) {
+async function updateStatus(courseId, status, extra = {}) { // extra là object chứa các trường muốn update thêm
     return Course.findOneAndUpdate({ courseId }, { status, ...extra }, { new: true });
-}
+} //gRPC
 
 async function updateCourseStats(courseId) {
     const totalSections = await Section.countDocuments({ courseId });
@@ -81,7 +83,10 @@ async function removeSection(id) {
 
 async function reorderSections(courseId, orderedIds) {
     const ops = orderedIds.map((id, index) =>
-        Section.findByIdAndUpdate(id, { orderIndex: index })
+        Section.findByIdAndUpdate({ _id: id, courseId },  // filter nếu chỉ cần lọc theo id thôi thì không cần _id: id nếu thêm 1 điều kiện thì cần thêm _id: id
+            { orderIndex: index }, // update
+            { new: true } // options
+        )
     );
     return Promise.all(ops);
 }
@@ -113,7 +118,7 @@ async function removeLesson(id) {
 
 async function reorderLessons(sectionId, orderedIds) {
     const ops = orderedIds.map((id, index) =>
-        Lesson.findByIdAndUpdate(id, { orderIndex: index })
+        Lesson.findByIdAndUpdate({ _id: id, sectionId }, { orderIndex: index }, { new: true })
     );
     return Promise.all(ops);
 }
@@ -152,7 +157,7 @@ async function findCouponsByCourse(courseId) {
     return Coupon.find({ courseId });
 }
 
-async function findCouponByCode(courseId, code) {
+async function findCouponByCode(courseId, code) { //gRPC
     return Coupon.findOne({ courseId, code });
 }
 

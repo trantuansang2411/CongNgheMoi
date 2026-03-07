@@ -20,12 +20,14 @@ router.post('/:courseId/sections', authenticate, authorize('INSTRUCTOR'), ctrl.c
 router.get('/:courseId/sections', ctrl.getSections);
 router.put('/:courseId/sections/:sectionId', authenticate, authorize('INSTRUCTOR'), ctrl.updateSection);
 router.delete('/:courseId/sections/:sectionId', authenticate, authorize('INSTRUCTOR'), ctrl.deleteSection);
+router.put('/:courseId/sections/reorder', authenticate, authorize('INSTRUCTOR'), ctrl.reorderSections);
 
 // ============ LESSON ============
 router.post('/:courseId/sections/:sectionId/lessons', authenticate, authorize('INSTRUCTOR'), ctrl.createLesson);
 router.get('/:courseId/sections/:sectionId/lessons', ctrl.getLessons);
 router.put('/:courseId/sections/:sectionId/lessons/:lessonId', authenticate, authorize('INSTRUCTOR'), ctrl.updateLesson);
 router.delete('/:courseId/sections/:sectionId/lessons/:lessonId', authenticate, authorize('INSTRUCTOR'), ctrl.deleteLesson);
+router.put('/:courseId/sections/:sectionId/lessons/reorder', authenticate, authorize('INSTRUCTOR'), ctrl.reorderLessons);
 
 // ============ RESOURCES ============
 router.post('/:courseId/sections/:sectionId/lessons/:lessonId/resources', authenticate, authorize('INSTRUCTOR'), ctrl.addResource);

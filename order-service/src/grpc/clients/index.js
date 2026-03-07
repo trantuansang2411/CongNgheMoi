@@ -24,7 +24,9 @@ const courseClient = createClient('course.proto', 'course', 'CourseService', COU
 const paymentClient = createClient('payment.proto', 'payment', 'PaymentService', PAYMENT_HOST);
 
 module.exports = {
+    getCoursePrice: promisify(courseClient, 'getCoursePrice'),
     getCourseBasicInfo: promisify(courseClient, 'getCourseBasicInfo'),
+    validateCoupon: promisify(courseClient, 'validateCoupon'),
     createPaymentIntent: promisify(paymentClient, 'createPaymentIntent'),
     getPaymentStatus: promisify(paymentClient, 'getPaymentStatus'),
 };

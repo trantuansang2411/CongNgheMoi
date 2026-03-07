@@ -31,16 +31,6 @@ async function validateCoupon(call, callback) {
     }
 }
 
-async function getLessonMeta(call, callback) {
-    try {
-        const data = await courseService.getLessonMeta(call.request.lessonId);
-        callback(null, data);
-    } catch (err) {
-        logger.error('gRPC GetLessonMeta error:', err.message);
-        callback({ code: grpc.status.NOT_FOUND, message: err.message });
-    }
-}
-
 async function getCourseBasicInfo(call, callback) {
     try {
         const course = await courseService.getCourse(call.request.courseId);
@@ -79,7 +69,6 @@ function startGrpcServer(port) {
     server.addService(courseProto.CourseService.service, {
         getCoursePrice,
         validateCoupon,
-        getLessonMeta,
         getCourseBasicInfo,
         publishCourse: publishCourseGrpc,
         hideCourse: hideCourseGrpc,

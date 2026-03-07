@@ -39,6 +39,9 @@ const updateSection = async (req, res, next) => {
 const deleteSection = async (req, res, next) => {
     try { res.json({ success: true, data: await svc.deleteSection(req.params.sectionId, req.user.id) }); } catch (e) { next(e); }
 };
+const reorderSections = async (req, res, next) => {
+    try { res.json({ success: true, data: await svc.reorderSections(req.params.courseId, req.user.id, req.body.orderedIds) }); } catch (e) { next(e); }
+};
 
 // ============ LESSON ============
 const createLesson = async (req, res, next) => {
@@ -75,12 +78,15 @@ const getCoupons = async (req, res, next) => {
 const deleteCoupon = async (req, res, next) => {
     try { res.json({ success: true, data: await svc.deleteCoupon(req.params.couponId, req.user.id) }); } catch (e) { next(e); }
 };
+const reorderLessons = async (req, res, next) => {
+    try { res.json({ success: true, data: await svc.reorderLessons(req.params.courseId, req.params.sectionId, req.user.id, req.body.orderedIds) }); } catch (e) { next(e); }
+};
 
 module.exports = {
     createCourse, getCourse, getInstructorCourses, getPublishedCourses,
     updateCourse, deleteCourse, submitCourse, previewCourse,
-    createSection, getSections, updateSection, deleteSection,
-    createLesson, getLessons, updateLesson, deleteLesson,
+    createSection, getSections, updateSection, deleteSection, reorderSections,
+    createLesson, getLessons, updateLesson, deleteLesson, reorderLessons,
     addResource, getResources, deleteResource,
     createCoupon, getCoupons, deleteCoupon,
 };

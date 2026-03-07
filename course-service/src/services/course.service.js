@@ -155,12 +155,20 @@ async function deleteSection(sectionId, instructorId) {
     return { message: 'Section deleted' };
 }
 
+async function reorderSections(courseId, instructorId, orderedIds) {
+    const course = await repo.findByCourseId(courseId);
+    if (!course) throw new NotFoundError('Course not found');
+    if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
+    await repo.reorderSections(courseId, orderedIds);
+    return { message: 'Sections reordered' };
+}
+
 // ============ LESSON ============
 async function createLesson(courseId, sectionId, instructorId, data) {
     const course = await repo.findByCourseId(courseId);
     if (!course) throw new NotFoundError('Course not found');
     if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
-    const lesson = await repo.createLesson({ ...data, courseId, sectionId });
+    const lesson = await repo.createLesson({ ...data, courseId, sectionId }); // khi spread sẽ gộp thành 1 object
     await repo.updateCourseStats(courseId);
     return lesson;
 }
@@ -191,6 +199,15 @@ async function deleteLesson(lessonId, instructorId) {
     return { message: 'Lesson deleted' };
 }
 
+async function reorderLessons(courseId, sectionId, instructorId, orderedIds) {
+    const course = await repo.findByCourseId(courseId);
+    if (!course) throw new NotFoundError('Course not found');
+    if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
+    await repo.reorderLessons(sectionId, orderedIds);
+    return { message: 'Lessons reordered' };
+}
+
+
 // ============ RESOURCES ============
 async function addResource(lessonId, instructorId, data) {
     const lesson = await repo.findLessonById(lessonId);
@@ -213,28 +230,6 @@ async function deleteResource(resourceId, instructorId) {
     if (!course) throw new NotFoundError('Course not found');
     if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
     return repo.softDeleteResource(resourceId);
-}
-
-async function getLessonMeta(lessonId) { // gRPC
-    const lesson = await repo.findLessonById(lessonId);
-    if (!lesson) throw new NotFoundError('Lesson not found');
-    const resources = await repo.findResourcesByLesson(lessonId);
-    return {
-        lessonId: lesson._id.toString(),
-        courseId: lesson.courseId,
-        title: lesson.title,
-        videoUrl: lesson.videoUrl,
-        durationSec: lesson.durationSec,
-        isPreview: lesson.isPreview,
-        resources: resources.map(r => ({
-            resourceId: r._id.toString(),
-            name: r.name,
-            url: r.url,
-            type: r.type,
-            mimeType: r.mimeType,
-            sizeBytes: r.sizeBytes,
-        })),
-    };
 }
 
 // ============ COUPON ============
@@ -279,10 +274,10 @@ module.exports = {
     updateCourse, deleteCourse, submitCourse, publishCourse, hideCourse,
     previewCourse, getCourseDetail, getCoursePrice,
     // Section
-    createSection, getSections, updateSection, deleteSection,
+    createSection, getSections, updateSection, deleteSection, reorderSections,
     // Lesson
-    createLesson, getLessons, updateLesson, deleteLesson,
-    addResource, getResources, deleteResource, getLessonMeta,
+    createLesson, getLessons, updateLesson, deleteLesson, reorderLessons,
+    addResource, getResources, deleteResource,
     // Coupon
     createCoupon, getCoupons, validateCoupon, deleteCoupon,
 };
