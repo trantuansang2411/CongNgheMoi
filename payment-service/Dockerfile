@@ -9,4 +9,4 @@ RUN npm install
 COPY payment-service/ .
 RUN npx prisma generate
 EXPOSE 3006 50056
-CMD ["sh", "-c", "npx prisma db push --skip-generate && npm start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]

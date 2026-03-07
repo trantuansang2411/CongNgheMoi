@@ -8,4 +8,4 @@ RUN npm install
 COPY search-service/ .
 RUN npx prisma generate
 EXPOSE 3004
-CMD ["sh", "-c", "npx prisma db push --skip-generate && npm start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
