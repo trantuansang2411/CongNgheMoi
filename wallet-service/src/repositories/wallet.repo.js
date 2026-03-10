@@ -9,6 +9,8 @@ async function getOrCreateWallet(userId) {
 }
 
 async function credit(userId, amount, description, refType, refId) {
+    // Sử dụng transaction để đảm bảo tính toàn vẹn dữ liệu, 
+    // nếu có lỗi xảy ra trong quá trình cập nhật số dư hoặc tạo giao dịch, toàn bộ transaction sẽ bị rollback.
     return prisma.$transaction(async (tx) => {
         let wallet = await tx.wallet.findUnique({ where: { userId } });
         if (!wallet) wallet = await tx.wallet.create({ data: { id: uuidv4(), userId, balance: 0 } });
