@@ -7,9 +7,9 @@ const courseSchema = new mongoose.Schema({
     title: { type: String, required: true },
     slug: { type: String, unique: true },
     description: { type: String, default: '' },
-    objectives: [{ type: String }],
-    requirements: [{ type: String }],
-    outcomes: [{ type: String }],
+    objectives: [{ type: String }], // học xong khóa này bạn sẽ làm được gì. 
+    requirements: [{ type: String }], // yêu cầu trước khi học khóa này
+    outcomes: [{ type: String }], // kết quả sau khi học khóa này
     topicId: { type: String, default: '' },
     thumbnailUrl: { type: String, default: '' },
     basePrice: { type: Number, default: 0 },

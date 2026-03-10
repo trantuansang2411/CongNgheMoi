@@ -79,9 +79,6 @@ services:
     ports:
       - "${API_GATEWAY_PORT:-3000}:3000"
     env_file: .env
-    depends_on:
-      auth-service:
-        condition: service_healthy
     networks:
       - app-network
     healthcheck:
