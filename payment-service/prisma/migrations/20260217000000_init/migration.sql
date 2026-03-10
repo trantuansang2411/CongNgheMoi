@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS "payment_transactions" (
     "status" VARCHAR(16) NOT NULL,
     "provider_data" JSONB,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+    "amount" DECIMAL(12,0) NOT NULL,
     CONSTRAINT "payment_transactions_pkey" PRIMARY KEY ("id")
 );
 
