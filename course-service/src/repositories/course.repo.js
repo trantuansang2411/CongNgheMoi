@@ -27,7 +27,9 @@ async function findByInstructor(instructorId, page = 1, limit = 20) {
 async function findPublished(page = 1, limit = 20) {
     const skip = (page - 1) * limit; // Tính số lượng phần tử cần bỏ qua
     const [items, total] = await Promise.all([
-        Course.find({ status: 'PUBLISHED', deletedAt: null }).sort({ publishedAt: -1 }).skip(skip).limit(limit),
+        Course.find({ status: 'PUBLISHED', deletedAt: null })
+            .select('courseId title slug thumbnailUrl basePrice salePrice currency instructorId')
+            .sort({ publishedAt: -1 }).skip(skip).limit(limit),
         Course.countDocuments({ status: 'PUBLISHED', deletedAt: null }),
     ]);
     return { items, total, page, limit };

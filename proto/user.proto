@@ -56,7 +56,7 @@ message ReviewApplicationResponse {
 }
 
 message ListApplicationsRequest {
-  string status = 1;   // PENDING | APPROVED | REJECTED (optional filter)
+  string status = 1;   // PENDING
   int32 page = 2;
   int32 limit = 3;
 }

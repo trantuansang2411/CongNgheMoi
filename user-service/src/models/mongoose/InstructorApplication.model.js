@@ -7,7 +7,7 @@ const instructorApplicationSchema = new mongoose.Schema({
         headline: String, // tagline/giới thiệu ngắn
         experience: String, // kinh nghiệm
         expertise: [String], // danh sách chuyên môn
-        idCardUrl: String, // ảnh thẻ
+        idCardUrl: String, // ảnh thẻ CCCD/CMND
         cvUrl: String, // cv
     },
     status: {
