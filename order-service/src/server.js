@@ -21,7 +21,11 @@ const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
 async function start() {
     try {
         await rabbitmq.connect(RABBITMQ_URL);
+        // Đăng ký các subscriber để lắng nghe các sự kiện 'payment.succeeded' và 'payment.failed' từ RabbitMQ.
         await rabbitmq.subscribe('order-service', 'payment.succeeded', (msg) => orderService.handlePaymentSucceeded(msg.data));
+        //khi nhận được sự kiện 'payment.succeeded', hàm handlePaymentSucceeded sẽ được gọi với dữ liệu của sự kiện, 
+        // cho phép chúng ta cập nhật trạng thái của đơn hàng tương ứng và thực hiện các hành động cần thiết khác 
+        // như xóa giỏ hàng và xuất bản sự kiện 'order.paid'.
         await rabbitmq.subscribe('order-service', 'payment.failed', (msg) => orderService.handlePaymentFailed(msg.data));
         app.listen(PORT, () => logger.info(`Order Service running on port ${PORT}`));
     } catch (err) {

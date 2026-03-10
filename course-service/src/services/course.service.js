@@ -2,6 +2,7 @@ const repo = require('../repositories/course.repo');
 const { publishEvent } = require('../../shared/events/rabbitmq');
 const logger = require('../../shared/utils/logger');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../../shared/utils/errors');
+const userGrpcClient = require('../grpc/user.client');
 
 // ============ COURSE ============
 async function createCourse(instructorId, data) {
@@ -52,15 +53,37 @@ async function publishCourse(courseId) { // gRPC
     if (course.status !== 'SUBMITTED') throw new BadRequestError('Course must be submitted first');
 
     const updated = await repo.updateStatus(courseId, 'PUBLISHED', { publishedAt: new Date() });
+// Lấy thông tin instructor displayName từ profile
+    let instructorName = 'Unknown';
+    try {
+        const instructor = await userGrpcClient.getInstructorProfile(updated.instructorId);
+        instructorName = instructor.displayName || 'Unknown';
+    } catch (err) {
+        logger.error('Failed to get instructor name:', err.message);
+    }
 
     try {
         await publishEvent('course.published', {
             courseId: updated.courseId,
             title: updated.title,
+            slug: updated.slug,
+            description: updated.description,
+            
             instructorId: updated.instructorId,
+            instructorName: instructorName,
+            
+            topicId: updated.topicId,
+            
             basePrice: updated.basePrice,
             salePrice: updated.salePrice,
-            topicId: updated.topicId,
+            currency: updated.currency,
+            
+            totalSections: updated.totalSections,
+            totalLessons: updated.totalLessons,
+            totalDurationSec: updated.totalDurationSec,
+            
+            thumbnailUrl: updated.thumbnailUrl,
+            
             publishedAt: updated.publishedAt,
         });
     } catch (err) {

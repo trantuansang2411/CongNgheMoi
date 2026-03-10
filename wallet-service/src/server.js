@@ -21,6 +21,9 @@ const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
 async function start() {
     try {
         await rabbitmq.connect(RABBITMQ_URL);
+        // Đăng ký subscriber để lắng nghe sự kiện 'topup.succeeded' và 'order.paid' từ RabbitMQ, khi nhận được sự kiện này,
+        // hàm handleTopupSucceeded sẽ được gọi để cập nhật số dư ví của người dùng sau khi nạp tiền thành công, 
+        // trong khi handleOrderPaid sẽ được gọi để trừ số dư ví của người dùng sau khi đơn hàng được thanh toán thành công.
         await rabbitmq.subscribe('wallet-service', 'topup.succeeded', (msg) => walletService.handleTopupSucceeded(msg.data));
         await rabbitmq.subscribe('wallet-service', 'order.paid', (msg) => walletService.handleOrderPaid(msg.data));
         app.listen(PORT, () => logger.info(`Wallet Service running on port ${PORT}`));

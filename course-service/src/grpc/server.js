@@ -39,6 +39,7 @@ async function getCourseBasicInfo(call, callback) {
             title: course.title,
             instructorId: course.instructorId,
             totalLessons: course.totalLessons,
+            price: course.saleprice > 0 ? course.salePrice : course.basePrice,
             status: course.status,
         });
     } catch (err) {

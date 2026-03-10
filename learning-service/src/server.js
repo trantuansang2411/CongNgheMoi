@@ -11,16 +11,14 @@ const learningService = require('./services/learning.service');
 const { startGrpcServer } = require('./grpc/server');
 const rabbitmq = require('../shared/events/rabbitmq');
 const logger = require('../shared/utils/logger');
+const route  = require('./routes/learning.routes');
 
 const app = express();
 app.use(helmet()); app.use(cors()); app.use(express.json()); app.use(morgan('dev'));
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'learning-service' }));
 
 // Routes
-app.get('/api/v1/learning/my-courses', authenticate, learningController.getMyCourses);
-app.get('/api/v1/learning/courses/:courseId', authenticate, learningController.getEnrollment);
-app.get('/api/v1/learning/courses/:courseId/progress', authenticate, learningController.getLessonProgress);
-app.post('/api/v1/learning/courses/:courseId/complete', authenticate, learningController.markLessonComplete);
+app.get('/api/v1/', route);
 
 app.use(errorHandler);
 
@@ -34,6 +32,8 @@ async function start() {
         await mongoose.connect(`${MONGO_URI}/learning_db`);
         logger.info('Learning Service connected to MongoDB');
         await rabbitmq.connect(RABBITMQ_URL);
+        // Đăng ký subscriber để lắng nghe sự kiện 'order.paid' từ RabbitMQ, khi nhận được sự kiện này, 
+        //hàm handleOrderPaid sẽ được gọi để cấp quyền truy cập vào khóa học cho sinh viên tương ứng
         await rabbitmq.subscribe('learning-service', 'order.paid', (msg) => learningService.handleOrderPaid(msg.data));
         startGrpcServer(GRPC_PORT);
         app.listen(PORT, () => logger.info(`Learning Service running on port ${PORT}`));

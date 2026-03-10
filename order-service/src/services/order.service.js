@@ -15,7 +15,7 @@ async function addToCart(studentId, courseId) {
     if (!courseInfo || !courseInfo.courseId) throw new NotFoundError('Course not found');
 
     return orderRepo.addToCart(studentId, {
-        courseId, titleSnapshot: courseInfo.title, priceSnapshot: Number(courseInfo.price), instructorId: courseInfo.instructorId || null,
+        courseId, titleSnapshot: courseInfo.title, priceSnapshot: Number(courseInfo.price) || 0, instructorId: courseInfo.instructorId || null,
     });
 }
 
@@ -68,6 +68,8 @@ async function checkout(studentId, { couponCode, couponCourseId, paymentProvider
     });
 
     // Create payment intent via gRPC
+    //payment intent là một đối tượng đại diện cho ý định thanh toán của khách hàng, 
+    // chứa thông tin về số tiền cần thanh toán, loại tiền tệ, phương thức thanh toán được chọn và các chi tiết liên quan khác.
     const paymentResult = await grpcClients.createPaymentIntent({
         type: 'ORDER_PAY', studentId, orderId: order.id, amount: total, currency: 'VND', provider: paymentProvider,
         idempotencyKey: `order_${order.id}`,
@@ -77,7 +79,8 @@ async function checkout(studentId, { couponCode, couponCourseId, paymentProvider
         paymentIntentId: paymentResult.paymentIntentId,
         ...(paymentResult.status === 'SUCCEEDED' ? { paidAt: new Date() } : {}),
     });
-
+//thanh toán thành công, chúng ta sẽ cập nhật trạng thái của đơn hàng thành 'PAID', 
+// xóa giỏ hàng của người dùng và xuất bản sự kiện 'order.paid' với thông tin chi tiết về đơn hàng và các khóa học đã mua. 
     if (paymentResult.status === 'SUCCEEDED') {
         await orderRepo.clearCart(studentId);
         await publishEvent('order.paid', {
@@ -106,6 +109,8 @@ async function getOrderById(studentId, orderId) {
 }
 
 // ========== EVENT HANDLERS ==========
+// Các hàm handlePaymentSucceeded và handlePaymentFailed được thiết kế để xử lý các sự kiện liên quan đến thanh toán,
+// như khi một đơn hàng được thanh toán thành công hoặc khi thanh toán thất bại.
 async function handlePaymentSucceeded(data) {
     const { orderId, paymentIntentId, studentId, amount } = data;
     const order = await orderRepo.findOrderById(orderId);

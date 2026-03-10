@@ -15,6 +15,7 @@ async function removeCourse(courseId) {
 
 async function searchCourses({ keyword, topicId, minPrice, maxPrice, sortBy, page = 1, limit = 20 }) {
     const where = {};
+    // Tìm kiếm theo tên khóa học (case-insensitive nghĩa là không phân biệt hoa thường)
     if (keyword) where.title = { contains: keyword, mode: 'insensitive' };
     if (topicId) where.topicId = topicId;
     if (minPrice !== undefined || maxPrice !== undefined) {
