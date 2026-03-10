@@ -26,6 +26,8 @@ const courseSchema = new mongoose.Schema({
     totalSections: { type: Number, default: 0 },
     totalLessons: { type: Number, default: 0 },
     totalDurationSec: { type: Number, default: 0 },
+    ratingAvg: { type: Number, default: 0 },
+    ratingCount: { type: Number, default: 0 },
     deletedAt: { type: Date, default: null },
 }, {
     timestamps: true,
