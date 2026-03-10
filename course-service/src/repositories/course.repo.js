@@ -28,7 +28,7 @@ async function findPublished(page = 1, limit = 20) {
     const skip = (page - 1) * limit; // Tính số lượng phần tử cần bỏ qua
     const [items, total] = await Promise.all([
         Course.find({ status: 'PUBLISHED', deletedAt: null })
-            .select('courseId title slug thumbnailUrl basePrice salePrice currency instructorId')
+            .select('courseId title slug thumbnailUrl basePrice salePrice currency instructorId ratingAvg ratingCount')
             .sort({ publishedAt: -1 }).skip(skip).limit(limit),
         Course.countDocuments({ status: 'PUBLISHED', deletedAt: null }),
     ]);
@@ -60,6 +60,10 @@ async function updateCourseStats(courseId) {
         { totalSections, totalLessons, totalDurationSec },
         { new: true }
     );
+}
+
+async function updateCourseRating(courseId, ratingAvg, ratingCount) {
+    return Course.findOneAndUpdate({ courseId }, { ratingAvg, ratingCount }, { new: true });
 }
 
 // ============ SECTION ============
@@ -182,7 +186,7 @@ async function incrementCouponUsage(id) {
 module.exports = {
     // Course
     createCourse, findByCourseId, findByInstructor, findPublished,
-    updateCourse, softDeleteCourse, updateStatus, updateCourseStats,
+    updateCourse, softDeleteCourse, updateStatus, updateCourseStats, updateCourseRating,
     // Section
     createSection, findSectionsByCourse, findSectionById,
     updateSection, removeSection, reorderSections,

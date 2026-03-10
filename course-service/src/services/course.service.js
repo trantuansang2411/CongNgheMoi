@@ -268,11 +268,15 @@ async function deleteCoupon(couponId, instructorId) {
     return repo.removeCoupon(couponId);
 }
 
+async function updateCourseRating(courseId, ratingAvg, ratingCount) {
+    return repo.updateCourseRating(courseId, ratingAvg, ratingCount);
+}
+
 module.exports = {
     // Course
     createCourse, getCourse, getInstructorCourses, getPublishedCourses,
     updateCourse, deleteCourse, submitCourse, publishCourse, hideCourse,
-    previewCourse, getCourseDetail, getCoursePrice,
+    previewCourse, getCourseDetail, getCoursePrice, updateCourseRating,
     // Section
     createSection, getSections, updateSection, deleteSection, reorderSections,
     // Lesson
