@@ -10,7 +10,7 @@ const rabbitmq = require('../shared/events/rabbitmq');
 const logger = require('../shared/utils/logger');
 
 const app = express();
-app.use(helmet()); app.use(cors()); app.use(express.json()); app.use(morgan('dev'));
+app.use(helmet()); app.use(cors()); app.use(express.json()); app.use(morgan('dev', { skip: (req) => req.path === '/health' }));
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'wallet-service' }));
 app.use('/api/v1/wallet', walletRoutes);
 app.use(errorHandler);

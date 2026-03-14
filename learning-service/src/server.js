@@ -14,11 +14,11 @@ const logger = require('../shared/utils/logger');
 const route  = require('./routes/learning.routes');
 
 const app = express();
-app.use(helmet()); app.use(cors()); app.use(express.json()); app.use(morgan('dev'));
+app.use(helmet()); app.use(cors()); app.use(express.json()); app.use(morgan('dev', { skip: (req) => req.path === '/health' }));
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'learning-service' }));
 
 // Routes
-app.get('/api/v1/', route);
+app.use('/api/v1/learning', route);
 
 app.use(errorHandler);
 

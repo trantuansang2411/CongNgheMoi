@@ -1,4 +1,5 @@
 const paymentService = require('../services/payment.service');
+const logger = require('../../shared/utils/logger');
 
 const topup = async (req, res, next) => {
     try {
@@ -28,10 +29,20 @@ const getStatus = async (req, res, next) => {
 
 const webhook = async (req, res, next) => {
     try {
-        const provider = req.params.provider.toUpperCase();
+        const providerParam = req.params.provider;
+        if (!providerParam) {
+            throw new Error('Missing webhook provider in route');
+        }
+        const provider = providerParam.toUpperCase();
+        logger.info(`Received webhook from ${provider}`);
         await paymentService.handleWebhook(provider, req.body, req.headers);
         res.json({ received: true });
     } catch (e) {
+        logger.error('Webhook processing failed', {
+            provider: req.params.provider,
+            message: e.message,
+            stack: e.stack,
+        });
         res.status(400).json({ error: e.message });
     }
 };
