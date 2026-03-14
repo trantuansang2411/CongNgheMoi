@@ -10,12 +10,19 @@ async function getCart(studentId) {
 }
 
 async function addToCart(studentId, courseId) {
-    // Get course info via gRPC
-    const courseInfo = await grpcClients.getCourseBasicInfo({ courseId });
-    if (!courseInfo || !courseInfo.courseId) throw new NotFoundError('Course not found');
+    // Get canonical pricing from course-service (basePrice/salePrice)
+    const coursePrice = await grpcClients.getCoursePrice({ courseId });
+    if (!coursePrice || !coursePrice.courseId) throw new NotFoundError('Course not found');
+
+    const salePrice = Number(coursePrice.salePrice) || 0;
+    const basePrice = Number(coursePrice.basePrice) || 0;
+    const priceSnapshot = salePrice > 0 ? salePrice : basePrice;
 
     return orderRepo.addToCart(studentId, {
-        courseId, titleSnapshot: courseInfo.title, priceSnapshot: Number(courseInfo.price) || 0, instructorId: courseInfo.instructorId || null,
+        courseId,
+        titleSnapshot: coursePrice.title,
+        priceSnapshot,
+        instructorId: coursePrice.instructorId || null,
     });
 }
 
@@ -24,7 +31,7 @@ async function removeFromCart(studentId, courseId) {
 }
 
 // ========== CHECKOUT ==========
-async function checkout(studentId, { couponCode, couponCourseId, paymentProvider = 'MOCK' }) {
+async function checkout(studentId, { couponCode, couponCourseId, paymentProvider}) {
     const cart = await orderRepo.getCart(studentId);
     if (!cart.items || cart.items.length === 0) throw new BadRequestError('Cart is empty');
 

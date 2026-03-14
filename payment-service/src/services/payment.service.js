@@ -80,7 +80,7 @@ const providers = {
 };
 
 // ============ SERVICE FUNCTIONS ============
-async function createPaymentIntent({ type, studentId, orderId, amount, currency = 'VND', provider = 'MOCK', idempotencyKey }) {
+async function createPaymentIntent({ type, studentId, orderId, amount, currency = 'VND', provider, idempotencyKey }) {
     if (!idempotencyKey) idempotencyKey = uuidv4();
 
     // Idempotency check
@@ -89,6 +89,7 @@ async function createPaymentIntent({ type, studentId, orderId, amount, currency 
         logger.info(`Idempotent hit: returning existing intent ${existing.id}`);
         return existing;
     }
+    provider = provider.toUpperCase();
     // Kiểm tra xem nhà cung cấp thanh toán có được hỗ trợ hay không bằng cách kiểm tra trong đối tượng providers.
     const providerAdapter = providers[provider];
     if (!providerAdapter) throw new BadRequestError(`Unsupported provider: ${provider}`);
@@ -132,10 +133,11 @@ async function getPaymentStatus(paymentIntentId) {
 async function handleWebhook(provider, body, headers) {
     const providerAdapter = providers[provider];
     if (!providerAdapter) throw new BadRequestError(`Unsupported provider: ${provider}`);
-
-    await paymentRepo.createWebhookLog({ provider, eventType: 'webhook_received', payload: body });
-
     const { eventType, data } = await providerAdapter.handleWebhook(body, headers);
+
+    // Persist normalized webhook payload (JSON), not raw Buffer body.
+    await paymentRepo.createWebhookLog({ provider, eventType, payload: data });
+
     let paymentIntentId;
     // Tùy thuộc vào nhà cung cấp, chúng ta sẽ trích xuất paymentIntentId từ dữ liệu webhook theo cách khác nhau.
     if (provider === 'STRIPE') {
@@ -157,7 +159,15 @@ async function handleWebhook(provider, body, headers) {
     // chúng ta sẽ cập nhật trạng thái của intent và tạo một giao dịch tương ứng.
     if (eventType.includes('succeeded') || eventType === 'checkout.session.completed') {
         await paymentRepo.updatePaymentIntentStatus(intent.id, 'SUCCEEDED');
-        await paymentRepo.createTransaction({ paymentIntentId: intent.id, providerData: data.id || data.orderId, amount: intent.amount, status: 'SUCCEEDED', rawResponse: data });
+        await paymentRepo.createTransaction({
+            paymentIntentId: intent.id,
+            providerData: {
+                providerTxId: data.id || data.orderId || null,
+                rawResponse: data,
+            },
+            amount: intent.amount,
+            status: 'SUCCEEDED',
+        });
 
         if (intent.type === 'TOPUP') {
             await publishEvent('topup.succeeded', { studentId: intent.studentId, amount: Number(intent.amount), paymentIntentId: intent.id });
@@ -167,7 +177,15 @@ async function handleWebhook(provider, body, headers) {
         logger.info(`Payment succeeded via webhook: ${intent.id}`);
     } else {
         await paymentRepo.updatePaymentIntentStatus(intent.id, 'FAILED');
-        await paymentRepo.createTransaction({ paymentIntentId: intent.id, providerData: data.id || data.orderId, amount: intent.amount, status: 'FAILED', rawResponse: data });
+        await paymentRepo.createTransaction({
+            paymentIntentId: intent.id,
+            providerData: {
+                providerTxId: data.id || data.orderId || null,
+                rawResponse: data,
+            },
+            amount: intent.amount,
+            status: 'FAILED',
+        });
 
         if (intent.type === 'ORDER_PAY') {
             await publishEvent('payment.failed', { orderId: intent.orderId, paymentIntentId: intent.id });

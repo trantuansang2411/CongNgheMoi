@@ -12,8 +12,14 @@ const logger = require('../shared/utils/logger');
 const app = express();
 app.use(helmet());
 app.use(cors());
-app.use(express.json());
-app.use(morgan('dev'));
+app.use((req, res, next) => {
+    // Stripe webhook signature verification requires raw body.
+    if (req.originalUrl === '/api/v1/payments/webhook/stripe') return next();
+    return express.json()(req, res, next);
+});
+app.use(morgan('dev', {
+    skip: (req) => req.path === '/health',
+}));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'payment-service' }));
 app.use('/api/v1/payments', paymentRoutes);

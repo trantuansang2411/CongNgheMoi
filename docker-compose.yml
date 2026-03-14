@@ -69,6 +69,21 @@ services:
     networks:
       - app-network
 
+  stripe-cli:
+    image: stripe/stripe-cli:latest
+    command:
+      - listen
+      - --api-key
+      - ${STRIPE_SECRET_KEY}
+      - --forward-to
+      - http://payment-service:3006/api/v1/payments/webhook/stripe
+    depends_on:
+      payment-service:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
   # =============================================
   # SERVICES
   # =============================================

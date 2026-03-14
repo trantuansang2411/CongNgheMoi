@@ -12,7 +12,7 @@ const app = express();
 // Security
 app.use(helmet());
 app.use(cors());
-app.use(morgan('dev'));
+app.use(morgan('dev', { skip: (req) => req.path === '/health' }));
 
 // Rate limiting
 const limiter = rateLimit({
