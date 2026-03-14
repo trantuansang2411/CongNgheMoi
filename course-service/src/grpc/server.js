@@ -138,17 +138,10 @@ async function publishCourseGrpc(call, callback) {
     }
 }
 
-<<<<<<< HEAD
-async function hideCourseGrpc(call, callback) {
-    try {
-        await courseService.hideCourse(call.request.courseId);
-        callback(null, { success: true, message: 'Course hidden' });
-=======
 async function markCourseNeedsFixesGrpc(call, callback) {
     try {
         await courseService.markCourseNeedsFixes(call.request.courseId);
         callback(null, { success: true, message: 'Course marked as needs fixes' });
->>>>>>> c49b3bf (update)
     } catch (err) {
         callback({ code: grpc.status.INTERNAL, message: err.message });
     }
@@ -160,15 +153,10 @@ function startGrpcServer(port) {
         getCoursePrice,
         validateCoupon,
         getCourseBasicInfo,
-<<<<<<< HEAD
-        publishCourse: publishCourseGrpc,
-        hideCourse: hideCourseGrpc,
-=======
         listSubmittedCourses,
         getCourseReviewDetail,
         markCourseNeedsFixes: markCourseNeedsFixesGrpc,
         publishCourse: publishCourseGrpc,
->>>>>>> c49b3bf (update)
     });
 
     server.bindAsync(`0.0.0.0:${port}`, grpc.ServerCredentials.createInsecure(), (err, boundPort) => {

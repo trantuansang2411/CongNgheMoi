@@ -2,13 +2,6 @@ const repo = require('../repositories/course.repo');
 const { publishEvent } = require('../../shared/events/rabbitmq');
 const logger = require('../../shared/utils/logger');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../../shared/utils/errors');
-<<<<<<< HEAD
-const userGrpcClient = require('../grpc/user.client');
-
-// ============ COURSE ============
-async function createCourse(instructorId, data) {
-    const course = await repo.createCourse({ ...data, instructorId });
-=======
 
 // ============ COURSE ============
 async function handleInstructorData(userId, displayName) {
@@ -24,7 +17,6 @@ async function createCourse(instructorId, data) {
     }
     const instructorName = cached ? cached.displayName : '';
     const course = await repo.createCourse({ ...data, instructorId, instructorName });
->>>>>>> c49b3bf (update)
     logger.info(`Course created: ${course.courseId}`);
     return course;
 }
@@ -43,13 +35,10 @@ async function getPublishedCourses(page, limit) {
     return repo.findPublished(page, limit);
 }
 
-<<<<<<< HEAD
-=======
 async function getSubmittedCourses(page, limit) {
     return repo.findSubmitted(page, limit);
 }
 
->>>>>>> c49b3bf (update)
 async function updateCourse(courseId, instructorId, data) {
     const course = await repo.findByCourseId(courseId);
     if (!course) throw new NotFoundError('Course not found');
@@ -110,18 +99,11 @@ async function publishCourse(courseId) { // gRPC
     return updated;
 }
 
-<<<<<<< HEAD
-async function hideCourse(courseId) { // gRPC
-    const course = await repo.findByCourseId(courseId);
-    if (!course) throw new NotFoundError('Course not found');
-    return repo.updateStatus(courseId, 'HIDDEN');
-=======
 async function markCourseNeedsFixes(courseId) { // gRPC
     const course = await repo.findByCourseId(courseId);
     if (!course) throw new NotFoundError('Course not found');
     if (course.status !== 'SUBMITTED') throw new BadRequestError('Only submitted courses can be marked as needs fixes');
     return repo.updateStatus(courseId, 'NEEDS_FIXES');
->>>>>>> c49b3bf (update)
 }
 
 async function previewCourse(courseId, instructorId) {
@@ -155,8 +137,6 @@ async function getCourseDetail(courseId) {
     };
 }
 
-<<<<<<< HEAD
-=======
 async function getCourseReviewDetail(courseId) {
     const course = await repo.findByCourseId(courseId);
     if (!course) throw new NotFoundError('Course not found');
@@ -168,7 +148,6 @@ async function getCourseReviewDetail(courseId) {
     return { course, sections, lessons };
 }
 
->>>>>>> c49b3bf (update)
 async function getCoursePrice(courseId) { // gRPC
     const course = await repo.findByCourseId(courseId);
     if (!course) throw new NotFoundError('Course not found');
@@ -337,13 +316,8 @@ async function updateCourseRating(courseId, ratingAvg, ratingCount) {
 module.exports = {
     // Course
     createCourse, getCourse, getInstructorCourses, getPublishedCourses,
-<<<<<<< HEAD
-    updateCourse, deleteCourse, submitCourse, publishCourse, hideCourse,
-    previewCourse, getCourseDetail, getCoursePrice, updateCourseRating,
-=======
     getSubmittedCourses, updateCourse, deleteCourse, submitCourse, publishCourse, markCourseNeedsFixes,
     previewCourse, getCourseDetail, getCourseReviewDetail, getCoursePrice, updateCourseRating,
->>>>>>> c49b3bf (update)
     // Section
     createSection, getSections, updateSection, deleteSection, reorderSections,
     // Lesson
@@ -351,11 +325,7 @@ module.exports = {
     addResource, getResources, deleteResource,
     // Coupon
     createCoupon, getCoupons, validateCoupon, deleteCoupon,
-<<<<<<< HEAD
-};
-=======
     // Instructor cache
     handleInstructorData,
 };
 
->>>>>>> c49b3bf (update)

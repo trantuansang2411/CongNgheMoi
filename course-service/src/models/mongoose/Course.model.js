@@ -28,10 +28,7 @@ const courseSchema = new mongoose.Schema({
     totalDurationSec: { type: Number, default: 0 },
     ratingAvg: { type: Number, default: 0 },
     ratingCount: { type: Number, default: 0 },
-<<<<<<< HEAD
-=======
     instructorName: { type: String, default: '' },
->>>>>>> c49b3bf (update)
     deletedAt: { type: Date, default: null },
 }, {
     timestamps: true,
@@ -41,7 +38,3 @@ const courseSchema = new mongoose.Schema({
 courseSchema.index({ title: 'text', description: 'text' });
 
 module.exports = mongoose.model('Course', courseSchema);
-<<<<<<< HEAD
-=======
-
->>>>>>> c49b3bf (update)

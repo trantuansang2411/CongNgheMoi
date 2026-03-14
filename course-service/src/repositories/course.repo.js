@@ -46,19 +46,13 @@ async function findPublished(page = 1, limit = 20) {
     const skip = (page - 1) * limit; // Tính số lượng phần tử cần bỏ qua
     const [items, total] = await Promise.all([
         Course.find({ status: 'PUBLISHED', deletedAt: null })
-<<<<<<< HEAD
-            .select('courseId title slug thumbnailUrl basePrice salePrice currency instructorId ratingAvg ratingCount')
-=======
             .select('courseId title slug thumbnailUrl basePrice salePrice currency instructorId instructorName ratingAvg ratingCount')
->>>>>>> c49b3bf (update)
             .sort({ publishedAt: -1 }).skip(skip).limit(limit),
         Course.countDocuments({ status: 'PUBLISHED', deletedAt: null }),
     ]);
     return { items, total, page, limit };
 }
 
-<<<<<<< HEAD
-=======
 async function findSubmitted(page = 1, limit = 20) {
     const skip = (page - 1) * limit;
     const [items, total] = await Promise.all([
@@ -72,7 +66,6 @@ async function findSubmitted(page = 1, limit = 20) {
     return { items, total, page, limit };
 }
 
->>>>>>> c49b3bf (update)
 async function updateCourse(courseId, data) {
     return Course.findOneAndUpdate({ courseId, deletedAt: null }, // filter
         data, //update
@@ -222,15 +215,10 @@ async function incrementCouponUsage(id) {
 }
 
 module.exports = {
-<<<<<<< HEAD
-    // Course
-    createCourse, findByCourseId, findByInstructor, findPublished,
-=======
     // Instructor profile
     upsertInstructorProfile, updateCoursesInstructorName, findInstructorProfile,
     // Course
     createCourse, findByCourseId, findByInstructor, findPublished, findSubmitted,
->>>>>>> c49b3bf (update)
     updateCourse, softDeleteCourse, updateStatus, updateCourseStats, updateCourseRating,
     // Section
     createSection, findSectionsByCourse, findSectionById,
