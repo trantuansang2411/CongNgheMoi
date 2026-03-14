@@ -1,6 +1,7 @@
 const userRepo = require('../repositories/user.repo');
 const logger = require('../../shared/utils/logger');
 const { NotFoundError, BadRequestError, ConflictError } = require('../../shared/utils/errors');
+const rabbitmq = require('../../shared/events/rabbitmq');
 
 async function getProfile(userId) {
     const profile = await userRepo.findProfileByUserId(userId);
@@ -66,10 +67,14 @@ async function reviewApplication(applicationId, status, reviewerId) {
 
     // If approved, create instructor profile
     if (status === 'APPROVED') {
+        const displayName = application.data.fullName || 'Instructor';
         await userRepo.createInstructorProfile({
             userId: application.userId,
-            displayName: application.data.fullName || 'Instructor',
-            headline: application.data.headline || '',
+            displayName
+        });
+        await rabbitmq.publishEvent('instructor.approved', {
+            userId: application.userId,
+            displayName
         });
         logger.info(`Instructor approved: ${application.userId}`);
     }
@@ -87,6 +92,19 @@ async function getInstructorProfile(userId) {
         throw new NotFoundError('Instructor profile not found');
     }
     return profile;
+}
+
+async function updateInstructorProfile(userId, data) {
+    const profile = await userRepo.findInstructorProfile(userId);
+    if (!profile) {
+        throw new NotFoundError('Instructor profile not found');
+    }
+    const updated = await userRepo.updateInstructorProfile(userId, data);
+    await rabbitmq.publishEvent('instructor.profile.updated', {
+        userId,
+        displayName: updated.displayName,
+    });
+    return updated;
 }
 
 async function updateInstructorStatus(userId, status) {
@@ -108,4 +126,5 @@ module.exports = {
     listApplications,
     getInstructorProfile,
     updateInstructorStatus,
+    updateInstructorProfile
 };

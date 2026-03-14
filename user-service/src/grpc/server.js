@@ -41,21 +41,6 @@ async function getUserProfile(call, callback) {
     }
 }
 
-async function getInstructorProfile(call, callback) {
-    try {
-        const profile = await userService.getInstructorProfile(call.request.userId);
-        callback(null, {
-            userId: profile.userId,
-            displayName: profile.displayName,
-            headline: profile.headline,
-            status: profile.status,
-        });
-    } catch (err) {
-        logger.error('gRPC GetInstructorProfile error:', err.message);
-        callback({ code: grpc.status.NOT_FOUND, message: err.message });
-    }
-}
-
 async function updateInstructorStatus(call, callback) {
     try {
         await userService.updateInstructorStatus(call.request.userId, call.request.status);
@@ -115,7 +100,6 @@ function startGrpcServer(port) {
     const server = new grpc.Server();
     server.addService(userProto.UserService.service, {
         getUserProfile,
-        getInstructorProfile,
         updateInstructorStatus,
         reviewApplication,
         listApplications,

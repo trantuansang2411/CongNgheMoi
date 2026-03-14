@@ -108,6 +108,7 @@ services:
       dockerfile: auth-service/Dockerfile
     ports:
       - "${AUTH_SERVICE_PORT:-3001}:3001"
+      - "${AUTH_GRPC_PORT:-50051}:50051"
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/auth_db

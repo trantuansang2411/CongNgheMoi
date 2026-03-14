@@ -17,7 +17,7 @@ const courseSchema = new mongoose.Schema({
     currency: { type: String, default: 'VND' },
     status: {
         type: String,
-        enum: ['DRAFT', 'SUBMITTED', 'PUBLISHED', 'HIDDEN'],
+        enum: ['DRAFT', 'SUBMITTED', 'NEEDS_FIXES', 'PUBLISHED'],
         default: 'DRAFT',
         index: true,
     },
@@ -26,6 +26,9 @@ const courseSchema = new mongoose.Schema({
     totalSections: { type: Number, default: 0 },
     totalLessons: { type: Number, default: 0 },
     totalDurationSec: { type: Number, default: 0 },
+    ratingAvg: { type: Number, default: 0 },
+    ratingCount: { type: Number, default: 0 },
+    instructorName: { type: String, default: '' },
     deletedAt: { type: Date, default: null },
 }, {
     timestamps: true,

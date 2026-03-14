@@ -16,6 +16,25 @@ async function start() {
         logger.info('Course Service connected to MongoDB');
 
         await rabbitmq.connect(RABBITMQ_URL);
+
+        const courseService = require('./services/course.service');
+        await rabbitmq.subscribe('course-service', 'review.created', async (msg) => {
+            const { courseId, ratingAvg, ratingCount } = msg.data;
+            await courseService.updateCourseRating(courseId, ratingAvg, ratingCount);
+        });
+        await rabbitmq.subscribe('course-service', 'review.updated', async (msg) => {
+            const { courseId, ratingAvg, ratingCount } = msg.data;
+            await courseService.updateCourseRating(courseId, ratingAvg, ratingCount);
+        });
+        await rabbitmq.subscribe('course-service', 'instructor.approved', async (msg) => {
+            const { userId, displayName } = msg.data;
+            await courseService.handleInstructorData(userId, displayName);
+        });
+        await rabbitmq.subscribe('course-service', 'instructor.profile.updated', async (msg) => {
+            const { userId, displayName } = msg.data;
+            await courseService.handleInstructorData(userId, displayName);
+        });
+
         startGrpcServer(GRPC_PORT);
 
         app.listen(PORT, () => {

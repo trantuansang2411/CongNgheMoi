@@ -5,9 +5,10 @@ const router = Router();
 
 router.use(authenticate, authorize('ADMIN'));
 router.get('/applications', ctrl.listApplications);
-router.get('/courses/:courseId', ctrl.getCourseInfo);
+router.get('/courses/submitted', ctrl.listSubmittedCourses);
+router.get('/courses/:courseId/review-detail', ctrl.getCourseReviewDetail);
 router.post('/courses/:courseId/publish', ctrl.publishCourse);
-router.post('/courses/:courseId/hide', ctrl.hideCourse);
+router.post('/courses/:courseId/needs-fixes', ctrl.markCourseNeedsFixes);
 router.post('/instructors/:userId/approve', ctrl.approveInstructor);
 router.post('/instructors/:userId/reject', ctrl.rejectInstructor);
 router.post('/instructors/:userId/ban', ctrl.banInstructor);

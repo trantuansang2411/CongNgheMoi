@@ -4,7 +4,6 @@ package user;
 
 service UserService {
   rpc GetUserProfile (GetUserProfileRequest) returns (GetUserProfileResponse);
-  rpc GetInstructorProfile (GetInstructorProfileRequest) returns (GetInstructorProfileResponse);
   rpc UpdateInstructorStatus (UpdateInstructorStatusRequest) returns (UpdateInstructorStatusResponse);
   rpc ReviewApplication (ReviewApplicationRequest) returns (ReviewApplicationResponse);
   rpc ListApplications (ListApplicationsRequest) returns (ListApplicationsResponse);
@@ -20,17 +19,6 @@ message GetUserProfileResponse {
   string avatar_url = 3;
   string email = 4;
   string bio = 5;
-}
-
-message GetInstructorProfileRequest {
-  string user_id = 1;
-}
-
-message GetInstructorProfileResponse {
-  string user_id = 1;
-  string display_name = 2;
-  string headline = 3;
-  string status = 4;
 }
 
 message UpdateInstructorStatusRequest {
