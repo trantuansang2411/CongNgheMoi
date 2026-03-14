@@ -1,36 +1,44 @@
-const Notification = require('../models/mongoose/Notification.model');
+const notificationRepo = require('../repositories/notification.repo');
+const { publishEvent } = require('../../shared/events/rabbitmq');
 const logger = require('../../shared/utils/logger');
 const { NotFoundError } = require('../../shared/utils/errors');
 
+async function createAndPublishNotification(payload) {
+    const notification = await notificationRepo.createNotification(payload);
+
+    try {
+        await publishEvent('notification.created', {
+            id: notification._id.toString(),
+            userId: notification.userId,
+            type: notification.type,
+            title: notification.title,
+            message: notification.message,
+            data: notification.data,
+            createdAt: notification.createdAt,
+        });
+    } catch (err) {
+        logger.warn(`Failed to publish notification.created for user=${payload.userId}: ${err.message}`);
+    }
+
+    return notification;
+}
+
 async function getNotifications(userId, page = 1, limit = 20) {
-    const skip = (page - 1) * limit;
-    const [items, total] = await Promise.all([
-        Notification.find({ userId }).skip(skip).limit(limit).sort({ createdAt: -1 }).lean(),
-        Notification.countDocuments({ userId }),
-    ]);
-    return { items, total, page, limit };
+    return notificationRepo.getNotificationsByUser(userId, page, limit);
 }
 
 async function markRead(userId, notificationId) {
-    const notif = await Notification.findOneAndUpdate(
-        { _id: notificationId, userId },
-        { read: true, readAt: new Date() },
-        { new: true }
-    );
+    const notif = await notificationRepo.markReadById(userId, notificationId);
     if (!notif) throw new NotFoundError('Notification not found');
     return notif;
 }
 
 async function markAllRead(userId) {
-    const result = await Notification.updateMany(
-        { userId, read: false },
-        { read: true, readAt: new Date() }
-    );
-    return { modifiedCount: result.modifiedCount };
+    return notificationRepo.markAllReadByUser(userId);
 }
 
 async function unreadCount(userId) {
-    const count = await Notification.countDocuments({ userId, read: false });
+    const count = await notificationRepo.countUnreadByUser(userId);
     return { unreadCount: count };
 }
 
@@ -38,7 +46,7 @@ async function unreadCount(userId) {
 async function handleOrderPaid(data) {
     const { studentId, orderId, items } = data;
     const titles = items.map(i => i.titleSnapshot).join(', ');
-    await Notification.create({
+    await createAndPublishNotification({
         userId: studentId, type: 'ORDER_PAID',
         title: 'Payment Successful',
         message: `Your order has been confirmed. Courses: ${titles}`,
@@ -47,20 +55,9 @@ async function handleOrderPaid(data) {
     logger.info(`Notification: ORDER_PAID for student=${studentId}`);
 }
 
-async function handleCourseEnrolled(data) {
-    const { studentId, courseId, title } = data;
-    await Notification.create({
-        userId: studentId, type: 'COURSE_ENROLLED',
-        title: 'Course Enrolled',
-        message: `You have been enrolled in: ${title}`,
-        data: { courseId },
-    });
-    logger.info(`Notification: COURSE_ENROLLED for student=${studentId}`);
-}
-
 async function handleCertificateIssued(data) {
     const { studentId, courseId, certificateNo } = data;
-    await Notification.create({
+    await createAndPublishNotification({
         userId: studentId, type: 'CERTIFICATE_ISSUED',
         title: 'Certificate Issued',
         message: `Congratulations! Your certificate ${certificateNo} has been issued.`,
@@ -69,4 +66,39 @@ async function handleCertificateIssued(data) {
     logger.info(`Notification: CERTIFICATE_ISSUED for student=${studentId}`);
 }
 
-module.exports = { getNotifications, markRead, markAllRead, unreadCount, handleOrderPaid, handleCourseEnrolled, handleCertificateIssued };
+async function handleCoursePublished(data) {
+    const { instructorId, courseId, title } = data;
+    await createAndPublishNotification({
+        userId: instructorId,
+        type: 'COURSE_PUBLISHED',
+        title: 'Course Published',
+        message: `Your course "${title}" has been published and is now available for students.`,
+        data: { courseId },
+    });
+    logger.info(`Notification: COURSE_PUBLISHED for instructor=${instructorId}`);
+}
+
+async function handleInstructorApproved(data) {
+    const { userId, displayName } = data;
+    await createAndPublishNotification({
+        userId,
+        type: 'INSTRUCTOR_APPROVED',
+        title: 'Instructor Application Approved',
+        message: displayName
+            ? `Congratulations ${displayName}! Your instructor application has been approved.`
+            : 'Congratulations! Your instructor application has been approved.',
+        data: {},
+    });
+    logger.info(`Notification: INSTRUCTOR_APPROVED for user=${userId}`);
+}
+
+module.exports = {
+    getNotifications,
+    markRead,
+    markAllRead,
+    unreadCount,
+    handleOrderPaid,
+    handleCertificateIssued,
+    handleCoursePublished,
+    handleInstructorApproved,
+};

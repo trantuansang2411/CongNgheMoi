@@ -1,7 +1,6 @@
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
-const logger = require('../../../shared/utils/logger');
 
 function createClient(protoFile, packageName, serviceName, host) {
     const PROTO_PATH = path.join(__dirname, '../../../proto', protoFile);
@@ -20,17 +19,20 @@ function promisify(client, method) {
 
 const COURSE_HOST = `${process.env.COURSE_SERVICE_HOST || 'localhost'}:${process.env.COURSE_GRPC_PORT || 50053}`;
 const USER_HOST = `${process.env.USER_SERVICE_HOST || 'localhost'}:${process.env.USER_GRPC_PORT || 50052}`;
+const AUTH_HOST = `${process.env.AUTH_SERVICE_HOST || 'localhost'}:${process.env.AUTH_GRPC_PORT || 50051}`;
 
 const courseClient = createClient('course.proto', 'course', 'CourseService', COURSE_HOST);
 const userClient = createClient('user.proto', 'user', 'UserService', USER_HOST);
+const authClient = createClient('auth.proto', 'auth', 'AuthService', AUTH_HOST);
 
 module.exports = {
     publishCourse: promisify(courseClient, 'publishCourse'),
-    hideCourse: promisify(courseClient, 'hideCourse'),
-    getCourseBasicInfo: promisify(courseClient, 'getCourseBasicInfo'),
-    getUserProfile: promisify(userClient, 'getUserProfile'),
+    markCourseNeedsFixes: promisify(courseClient, 'markCourseNeedsFixes'),
+    listSubmittedCourses: promisify(courseClient, 'listSubmittedCourses'),
+    getCourseReviewDetail: promisify(courseClient, 'getCourseReviewDetail'),
     updateInstructorStatus: promisify(userClient, 'updateInstructorStatus'),
     reviewApplication: promisify(userClient, 'reviewApplication'),
     listApplications: promisify(userClient, 'listApplications'),
+    addRoleToAccount: promisify(authClient, 'addRoleToAccount'),
 };
 

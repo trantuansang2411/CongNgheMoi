@@ -26,6 +26,14 @@ async function start() {
             const { courseId, ratingAvg, ratingCount } = msg.data;
             await courseService.updateCourseRating(courseId, ratingAvg, ratingCount);
         });
+        await rabbitmq.subscribe('course-service', 'instructor.approved', async (msg) => {
+            const { userId, displayName } = msg.data;
+            await courseService.handleInstructorData(userId, displayName);
+        });
+        await rabbitmq.subscribe('course-service', 'instructor.profile.updated', async (msg) => {
+            const { userId, displayName } = msg.data;
+            await courseService.handleInstructorData(userId, displayName);
+        });
 
         startGrpcServer(GRPC_PORT);
 

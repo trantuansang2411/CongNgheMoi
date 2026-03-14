@@ -26,8 +26,9 @@ async function start() {
         logger.info('Notification Service connected to MongoDB');
         await rabbitmq.connect(RABBITMQ_URL);
         await rabbitmq.subscribe('notification-service', 'order.paid', (msg) => notificationService.handleOrderPaid(msg.data));
-        await rabbitmq.subscribe('notification-service', 'course.enrolled', (msg) => notificationService.handleCourseEnrolled(msg.data));
         await rabbitmq.subscribe('notification-service', 'certificate.issued', (msg) => notificationService.handleCertificateIssued(msg.data));
+        await rabbitmq.subscribe('notification-service', 'course.published', (msg) => notificationService.handleCoursePublished(msg.data));
+        await rabbitmq.subscribe('notification-service', 'instructor.approved', (msg) => notificationService.handleInstructorApproved(msg.data));
         app.listen(PORT, () => logger.info(`Notification Service running on port ${PORT}`));
     } catch (err) {
         logger.error('Notification Service failed to start:', err.message);
