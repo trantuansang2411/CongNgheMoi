@@ -3,7 +3,25 @@ const Section = require('../models/mongoose/Section.model');
 const Lesson = require('../models/mongoose/Lesson.model');
 const LessonResource = require('../models/mongoose/LessonResource.model');
 const Coupon = require('../models/mongoose/Coupon.model');
+const InstructorProfile = require('../models/mongoose/InstructorProfile.model');
 const slugify = require('slugify');
+
+// ============ INSTRUCTOR PROFILE ============
+async function upsertInstructorProfile(userId, displayName) {
+    return InstructorProfile.findOneAndUpdate(
+        { instructorId: userId },
+        { instructorId: userId, displayName },
+        { upsert: true, new: true }
+    );
+}
+
+async function updateCoursesInstructorName(instructorId, displayName) {
+    return Course.updateMany({ instructorId }, { instructorName: displayName });
+}
+
+async function findInstructorProfile(instructorId) {
+    return InstructorProfile.findOne({ instructorId });
+}
 
 // ============ COURSE ============
 async function createCourse(data) {
@@ -28,13 +46,33 @@ async function findPublished(page = 1, limit = 20) {
     const skip = (page - 1) * limit; // Tính số lượng phần tử cần bỏ qua
     const [items, total] = await Promise.all([
         Course.find({ status: 'PUBLISHED', deletedAt: null })
+<<<<<<< HEAD
             .select('courseId title slug thumbnailUrl basePrice salePrice currency instructorId ratingAvg ratingCount')
+=======
+            .select('courseId title slug thumbnailUrl basePrice salePrice currency instructorId instructorName ratingAvg ratingCount')
+>>>>>>> c49b3bf (update)
             .sort({ publishedAt: -1 }).skip(skip).limit(limit),
         Course.countDocuments({ status: 'PUBLISHED', deletedAt: null }),
     ]);
     return { items, total, page, limit };
 }
 
+<<<<<<< HEAD
+=======
+async function findSubmitted(page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const [items, total] = await Promise.all([
+        Course.find({ status: 'SUBMITTED', deletedAt: null })
+            .select('courseId title instructorId instructorName thumbnailUrl basePrice salePrice currency totalSections totalLessons totalDurationSec submittedAt')
+            .sort({ submittedAt: -1, createdAt: -1 })
+            .skip(skip)
+            .limit(limit),
+        Course.countDocuments({ status: 'SUBMITTED', deletedAt: null }),
+    ]);
+    return { items, total, page, limit };
+}
+
+>>>>>>> c49b3bf (update)
 async function updateCourse(courseId, data) {
     return Course.findOneAndUpdate({ courseId, deletedAt: null }, // filter
         data, //update
@@ -184,8 +222,15 @@ async function incrementCouponUsage(id) {
 }
 
 module.exports = {
+<<<<<<< HEAD
     // Course
     createCourse, findByCourseId, findByInstructor, findPublished,
+=======
+    // Instructor profile
+    upsertInstructorProfile, updateCoursesInstructorName, findInstructorProfile,
+    // Course
+    createCourse, findByCourseId, findByInstructor, findPublished, findSubmitted,
+>>>>>>> c49b3bf (update)
     updateCourse, softDeleteCourse, updateStatus, updateCourseStats, updateCourseRating,
     // Section
     createSection, findSectionsByCourse, findSectionById,

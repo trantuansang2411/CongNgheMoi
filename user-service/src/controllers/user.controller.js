@@ -30,9 +30,22 @@ async function getApplication(req, res, next) {
 
 async function getInstructorProfile(req, res, next) {
     try {
-        const profile = await userService.getInstructorProfile(req.params.userId || req.user.id);
+        const profile = await userService.getInstructorProfile(req.params.userId);
+        res.json({ success: true, data: profile });
+    } catch (err) { next(err); }
+}
+async function updateInstructorProfile(req, res, next) {
+    try {
+        const profile = await userService.updateInstructorProfile(req.user.id, req.body);
+        res.json({ success: true, data: profile });
+    } catch (err) { next(err); }
+}
+async function getMyInstructorProfile(req, res, next) {
+    try {
+        const profile = await userService.getInstructorProfile(req.user.id);
         res.json({ success: true, data: profile });
     } catch (err) { next(err); }
 }
 
-module.exports = { getProfile, updateProfile, applyInstructor, getApplication, getInstructorProfile };
+
+module.exports = { getProfile, updateProfile, applyInstructor, getApplication, getInstructorProfile, updateInstructorProfile, getMyInstructorProfile };

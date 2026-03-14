@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package auth;
+
+service AuthService {
+  rpc AddRoleToAccount (AddRoleToAccountRequest) returns (AddRoleToAccountResponse);
+}
+
+message AddRoleToAccountRequest {
+  string account_id = 1;
+  string role = 2;
+}
+
+message AddRoleToAccountResponse {
+  bool success = 1;
+  string message = 2;
+}

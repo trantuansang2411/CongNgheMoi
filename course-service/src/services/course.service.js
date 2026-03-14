@@ -2,11 +2,29 @@ const repo = require('../repositories/course.repo');
 const { publishEvent } = require('../../shared/events/rabbitmq');
 const logger = require('../../shared/utils/logger');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../../shared/utils/errors');
+<<<<<<< HEAD
 const userGrpcClient = require('../grpc/user.client');
 
 // ============ COURSE ============
 async function createCourse(instructorId, data) {
     const course = await repo.createCourse({ ...data, instructorId });
+=======
+
+// ============ COURSE ============
+async function handleInstructorData(userId, displayName) {
+    await repo.upsertInstructorProfile(userId, displayName);
+    await repo.updateCoursesInstructorName(userId, displayName);
+    logger.info(`Instructor cache updated: ${userId} -> ${displayName}`);
+}
+
+async function createCourse(instructorId, data) {
+    const cached = await repo.findInstructorProfile(instructorId);
+    if (!cached) {
+        throw new NotFoundError('Instructor profile not found');
+    }
+    const instructorName = cached ? cached.displayName : '';
+    const course = await repo.createCourse({ ...data, instructorId, instructorName });
+>>>>>>> c49b3bf (update)
     logger.info(`Course created: ${course.courseId}`);
     return course;
 }
@@ -25,6 +43,13 @@ async function getPublishedCourses(page, limit) {
     return repo.findPublished(page, limit);
 }
 
+<<<<<<< HEAD
+=======
+async function getSubmittedCourses(page, limit) {
+    return repo.findSubmitted(page, limit);
+}
+
+>>>>>>> c49b3bf (update)
 async function updateCourse(courseId, instructorId, data) {
     const course = await repo.findByCourseId(courseId);
     if (!course) throw new NotFoundError('Course not found');
@@ -43,7 +68,7 @@ async function submitCourse(courseId, instructorId) {
     const course = await repo.findByCourseId(courseId);
     if (!course) throw new NotFoundError('Course not found');
     if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
-    if (course.status !== 'DRAFT') throw new BadRequestError('Only draft courses can be submitted');
+    if (!['DRAFT', 'NEEDS_FIXES'].includes(course.status)) throw new BadRequestError('Only draft or needs-fixes courses can be submitted');
     return repo.updateStatus(courseId, 'SUBMITTED', { submittedAt: new Date() });
 }
 
@@ -53,14 +78,6 @@ async function publishCourse(courseId) { // gRPC
     if (course.status !== 'SUBMITTED') throw new BadRequestError('Course must be submitted first');
 
     const updated = await repo.updateStatus(courseId, 'PUBLISHED', { publishedAt: new Date() });
-// Lấy thông tin instructor displayName từ profile
-    let instructorName = 'Unknown';
-    try {
-        const instructor = await userGrpcClient.getInstructorProfile(updated.instructorId);
-        instructorName = instructor.displayName || 'Unknown';
-    } catch (err) {
-        logger.error('Failed to get instructor name:', err.message);
-    }
 
     try {
         await publishEvent('course.published', {
@@ -68,22 +85,22 @@ async function publishCourse(courseId) { // gRPC
             title: updated.title,
             slug: updated.slug,
             description: updated.description,
-            
+
             instructorId: updated.instructorId,
-            instructorName: instructorName,
-            
+            instructorName: updated.instructorName || '',
+
             topicId: updated.topicId,
-            
+
             basePrice: updated.basePrice,
             salePrice: updated.salePrice,
             currency: updated.currency,
-            
+
             totalSections: updated.totalSections,
             totalLessons: updated.totalLessons,
             totalDurationSec: updated.totalDurationSec,
-            
+
             thumbnailUrl: updated.thumbnailUrl,
-            
+
             publishedAt: updated.publishedAt,
         });
     } catch (err) {
@@ -93,10 +110,18 @@ async function publishCourse(courseId) { // gRPC
     return updated;
 }
 
+<<<<<<< HEAD
 async function hideCourse(courseId) { // gRPC
     const course = await repo.findByCourseId(courseId);
     if (!course) throw new NotFoundError('Course not found');
     return repo.updateStatus(courseId, 'HIDDEN');
+=======
+async function markCourseNeedsFixes(courseId) { // gRPC
+    const course = await repo.findByCourseId(courseId);
+    if (!course) throw new NotFoundError('Course not found');
+    if (course.status !== 'SUBMITTED') throw new BadRequestError('Only submitted courses can be marked as needs fixes');
+    return repo.updateStatus(courseId, 'NEEDS_FIXES');
+>>>>>>> c49b3bf (update)
 }
 
 async function previewCourse(courseId, instructorId) {
@@ -130,6 +155,20 @@ async function getCourseDetail(courseId) {
     };
 }
 
+<<<<<<< HEAD
+=======
+async function getCourseReviewDetail(courseId) {
+    const course = await repo.findByCourseId(courseId);
+    if (!course) throw new NotFoundError('Course not found');
+    if (course.status !== 'SUBMITTED') throw new BadRequestError('Course is not submitted for review');
+
+    const sections = await repo.findSectionsByCourse(courseId);
+    const lessons = await repo.findLessonsByCourse(courseId);
+
+    return { course, sections, lessons };
+}
+
+>>>>>>> c49b3bf (update)
 async function getCoursePrice(courseId) { // gRPC
     const course = await repo.findByCourseId(courseId);
     if (!course) throw new NotFoundError('Course not found');
@@ -298,8 +337,13 @@ async function updateCourseRating(courseId, ratingAvg, ratingCount) {
 module.exports = {
     // Course
     createCourse, getCourse, getInstructorCourses, getPublishedCourses,
+<<<<<<< HEAD
     updateCourse, deleteCourse, submitCourse, publishCourse, hideCourse,
     previewCourse, getCourseDetail, getCoursePrice, updateCourseRating,
+=======
+    getSubmittedCourses, updateCourse, deleteCourse, submitCourse, publishCourse, markCourseNeedsFixes,
+    previewCourse, getCourseDetail, getCourseReviewDetail, getCoursePrice, updateCourseRating,
+>>>>>>> c49b3bf (update)
     // Section
     createSection, getSections, updateSection, deleteSection, reorderSections,
     // Lesson
@@ -307,4 +351,11 @@ module.exports = {
     addResource, getResources, deleteResource,
     // Coupon
     createCoupon, getCoupons, validateCoupon, deleteCoupon,
+<<<<<<< HEAD
 };
+=======
+    // Instructor cache
+    handleInstructorData,
+};
+
+>>>>>>> c49b3bf (update)
