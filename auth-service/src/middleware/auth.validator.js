@@ -5,6 +5,16 @@ const registerSchema = Joi.object({
     password: Joi.string().min(6).max(128).required(),
 });
 
+const verifyOtpSchema = Joi.object({
+    email: Joi.string().email().required(),
+    otp: Joi.string().length(6).pattern(/^\d+$/).required()
+        .messages({ 'string.pattern.base': 'OTP must be a 6-digit number' }),
+});
+
+const resendOtpSchema = Joi.object({
+    email: Joi.string().email().required(),
+});
+
 const loginSchema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().required(),
@@ -29,9 +39,12 @@ const resetPasswordSchema = Joi.object({
 
 module.exports = {
     registerSchema,
+    verifyOtpSchema,
+    resendOtpSchema,
     loginSchema,
     googleLoginSchema,
     refreshTokenSchema,
     forgotPasswordSchema,
     resetPasswordSchema,
 };
+

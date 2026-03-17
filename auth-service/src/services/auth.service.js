@@ -5,7 +5,8 @@ const { OAuth2Client } = require('google-auth-library');
 const authRepo = require('../repositories/auth.repo');
 const { publishEvent } = require('../../shared/events/rabbitmq');
 const logger = require('../../shared/utils/logger');
-const { BadRequestError, UnauthorizedError, ConflictError } = require('../../shared/utils/errors');
+const { AppError, BadRequestError, UnauthorizedError, ConflictError } = require('../../shared/utils/errors');
+const { sendOtpEmail } = require('../utils/email.util');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '5m';
@@ -15,6 +16,9 @@ const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const ms = require('ms'); // chuyển đổi chuỗi thời gian ví dụ '7d', '24h', '30m' thành milliseconds
 const REFRESH_TOKEN_MS = ms(JWT_REFRESH_EXPIRES_IN);
+
+const OTP_EXPIRES_MINUTES = parseInt(process.env.OTP_EXPIRES_MINUTES || '1', 10);
+const OTP_MAX_ATTEMPTS = parseInt(process.env.OTP_MAX_ATTEMPTS || '5', 10);
 
 function generateTokens(account, roles) {
     const payload = {
@@ -34,23 +38,137 @@ function getRoleNames(account) {
     return account.accountRoles.map((ar) => ar.role.name);
 }
 
-async function register({ email, password }) {
-    const existing = await authRepo.findAccountByEmail(email); // tìm tài khoản theo email
-    if (existing) {
-        throw new ConflictError('Email already registered'); // nếu tài khoản đã tồn tại thì ném ra lỗi
+/**
+ * Tạo mã OTP 6 chữ số ngẫu nhiên
+ */
+function generateOtpCode() {
+    return crypto.randomInt(100000, 999999).toString();
+}
+
+/**
+ * Tạo OTP, lưu vào DB và gửi email
+ */
+async function createAndSendOtp(account) {
+    // Thu hồi tất cả OTP cũ chưa dùng
+    await authRepo.revokeAllOtps(account.id);
+
+    // Tạo OTP mới
+    const otpCode = generateOtpCode();
+    const codeHash = crypto.createHash('sha256').update(otpCode).digest('hex');
+    const expiresAt = new Date(Date.now() + OTP_EXPIRES_MINUTES * 60 * 1000);
+
+    const createdOtp = await authRepo.createEmailVerificationOtp({
+        accountId: account.id,
+        codeHash,
+        expiresAt,
+    });
+
+    // Fail-closed: nếu gửi mail thất bại thì vô hiệu hóa OTP vừa tạo và trả lỗi 5xx.
+    try {
+        await sendOtpEmail(account.email, otpCode);
+    } catch (err) {
+        try {
+            await authRepo.revokeOtp(createdOtp.id);
+        } catch (cleanupErr) {
+            logger.error(`Failed to invalidate OTP ${createdOtp.id} after email delivery failure: ${cleanupErr.message}`);
+        }
+
+        logger.error(`Failed to send OTP email to ${account.email}: ${err.message}`);
+        throw new AppError('Failed to deliver OTP email. Please try again later.', 503, 'OTP_DELIVERY_FAILED');
     }
 
-    const passwordHash = await bcrypt.hash(password, 12); // băm mật khẩu với độ phức tạp 12 (bcrypt thực hiện 4096 lần xử lý)
-    const account = await authRepo.createAccount({ email, passwordHash }); // tạo tài khoản mới
-    const roles = getRoleNames(account); // lấy danh sách vai trò của tài khoản
-    const { accessToken, refreshToken } = generateTokens(account, roles); // tạo access token và refresh token
+    return otpCode;
+}
+
+// =============================================
+// REGISTER — Tạo account PENDING + gửi OTP
+// =============================================
+async function register({ email, password }) {
+    const existing = await authRepo.findAccountByEmail(email);
+
+    if (existing) {
+        // Nếu account đã tồn tại nhưng vẫn PENDING → gửi lại OTP thay vì báo lỗi trùng
+        if (existing.status === 'PENDING_VERIFICATION') {
+            await createAndSendOtp(existing);
+            logger.info(`Re-sent OTP for pending account: ${email}`);
+            return {
+                email: existing.email,
+                requiresVerification: true,
+                message: 'OTP sent to email',
+            };
+        }
+        throw new ConflictError('Email already registered');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    // Tạo account với status = PENDING_VERIFICATION (default trong repo)
+    const account = await authRepo.createAccount({ email, passwordHash });
+
+    // Tạo và gửi OTP
+    await createAndSendOtp(account);
+
+    logger.info(`User registered (pending verification): ${email}`);
+
+    // KHÔNG trả token, KHÔNG publish event
+    return {
+        email: account.email,
+        requiresVerification: true,
+        message: 'OTP sent to email',
+    };
+}
+
+// =============================================
+// VERIFY REGISTRATION OTP — Xác thực OTP → kích hoạt → cấp token
+// =============================================
+async function verifyRegistrationOtp({ email, otp }) {
+    const account = await authRepo.findAccountByEmail(email);
+    if (!account) {
+        throw new BadRequestError('Account not found');
+    }
+
+    if (account.status === 'ACTIVE') {
+        throw new BadRequestError('Account is already verified');
+    }
+
+    if (account.status !== 'PENDING_VERIFICATION') {
+        throw new UnauthorizedError(`Account is ${account.status.toLowerCase()}`);
+    }
+
+    // Tìm OTP mới nhất còn hiệu lực
+    const otpRecord = await authRepo.findLatestOtpByAccountId(account.id);
+    if (!otpRecord) {
+        throw new BadRequestError('OTP expired or not found. Please request a new one.');
+    }
+
+    // Kiểm tra số lần thử
+    if (otpRecord.attempts >= OTP_MAX_ATTEMPTS) {
+        throw new BadRequestError('Too many attempts. Please request a new OTP.');
+    }
+
+    // So sánh hash
+    const inputHash = crypto.createHash('sha256').update(otp).digest('hex');
+    if (inputHash !== otpRecord.codeHash) {
+        await authRepo.incrementOtpAttempts(otpRecord.id);
+        const remaining = OTP_MAX_ATTEMPTS - otpRecord.attempts - 1;
+        throw new BadRequestError(`Invalid OTP. ${remaining} attempt(s) remaining.`);
+    }
+
+    // OTP đúng → đánh dấu đã dùng
+    await authRepo.markOtpUsed(otpRecord.id);
+
+    // Kích hoạt tài khoản
+    await authRepo.updateAccountStatus(account.id, 'ACTIVE');
+
+    // Cấp token
+    const roles = getRoleNames(account);
+    const { accessToken, refreshToken } = generateTokens(account, roles);
 
     // Lưu refresh token
     const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_MS);
     await authRepo.createRefreshToken({ accountId: account.id, tokenHash: refreshTokenHash, expiresAt });
 
-    logger.info(`User registered: ${email} with roles: ${roles.join(', ')}`);
+    logger.info(`Account verified and activated: ${email}`);
 
     // Publish event để User Service tạo profile
     await publishEvent('user.created', { userId: account.id, email: account.email, roles });
@@ -62,6 +180,30 @@ async function register({ email, password }) {
     };
 }
 
+// =============================================
+// RESEND REGISTRATION OTP — Gửi lại OTP cho account PENDING
+// =============================================
+async function resendRegistrationOtp({ email }) {
+    const account = await authRepo.findAccountByEmail(email);
+    if (!account) {
+        // Không tiết lộ email có tồn tại hay không
+        return { message: 'If the email exists and is pending verification, a new OTP has been sent.' };
+    }
+
+    if (account.status !== 'PENDING_VERIFICATION') {
+        throw new BadRequestError('Account is already verified or not eligible for OTP.');
+    }
+
+    await createAndSendOtp(account);
+
+    logger.info(`OTP resent for account: ${email}`);
+
+    return { message: 'If the email exists and is pending verification, a new OTP has been sent.' };
+}
+
+// =============================================
+// LOGIN — Giữ nguyên (đã có check status !== ACTIVE)
+// =============================================
 async function login({ email, password }) {
     const account = await authRepo.findAccountByEmail(email);
     if (!account) {
@@ -97,6 +239,9 @@ async function login({ email, password }) {
     };
 }
 
+// =============================================
+// GOOGLE LOGIN — Google đã xác thực email → tạo ACTIVE luôn
+// =============================================
 async function googleLogin({ idToken }) {
     const ticket = await googleClient.verifyIdToken({
         idToken,
@@ -108,12 +253,13 @@ async function googleLogin({ idToken }) {
     let account = await authRepo.findAccountByEmail(email);
 
     if (!account) {
-        // Auto-register
+        // Auto-register với status ACTIVE (Google đã xác thực email)
         account = await authRepo.createAccount({
             email,
             passwordHash: null,
             provider: 'GOOGLE',
             providerId: googleId,
+            status: 'ACTIVE',
         });
         logger.info(`Google user auto-registered: ${email}`);
         const newRoles = getRoleNames(account);
@@ -225,6 +371,8 @@ async function addRole(accountId, roleName) {
 
 module.exports = {
     register,
+    verifyRegistrationOtp,
+    resendRegistrationOtp,
     login,
     googleLogin,
     refreshAccessToken,
