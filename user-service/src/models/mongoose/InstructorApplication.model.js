@@ -3,12 +3,16 @@ const mongoose = require('mongoose');
 const instructorApplicationSchema = new mongoose.Schema({
     userId: { type: String, required: true, index: true }, //user gửi đơn, index: admin dashboard thường filter theo userId hoặc check user đã nộp đơn chưa (và có thể gửi nhiều đơn do bị từ chối và ko có unique nên được)
     data: { //dữ liệu nộp đơn
-        fullName: String, // tên khai trong đơn (có thể khác profile hiện tại) 
-        headline: String, // tagline/giới thiệu ngắn
-        experience: String, // kinh nghiệm
+        fullName: { type: String, trim: true, required: true }, // họ tên đầy đủ
+        birthDate: { type: Date, required: true }, // ngày sinh
+        headline: { type: String, trim: true }, // tagline/giới thiệu ngắn
+        experience: { type: String, trim: true, required: true }, // kinh nghiệm
         expertise: [String], // danh sách chuyên môn
-        idCardUrl: String, // ảnh thẻ CCCD/CMND
-        cvUrl: String, // cv
+        educationLevel: { type: String, trim: true, required: true }, // trình độ học vấn
+        teachingTopics: { type: [String], default: [] }, // muốn dạy môn/chủ đề gì
+        portfolioUrl: { type: String, trim: true, required: true }, // link portfolio/linkedin/github/website
+        certificateUrls: { type: [String], default: [] }, // ảnh hoặc file chứng chỉ nếu có
+        idCardUrl: { type: String, trim: true, required: true }, // ảnh thẻ CCCD/CMND
     },
     status: {
         type: String,

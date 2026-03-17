@@ -33,6 +33,7 @@ module.exports = {
     updateInstructorStatus: promisify(userClient, 'updateInstructorStatus'),
     reviewApplication: promisify(userClient, 'reviewApplication'),
     listApplications: promisify(userClient, 'listApplications'),
+    getApplication: promisify(userClient, 'getApplication'),
     addRoleToAccount: promisify(authClient, 'addRoleToAccount'),
 };
 

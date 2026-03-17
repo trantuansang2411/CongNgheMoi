@@ -15,6 +15,10 @@ async function updateProfile(userId, data) {
     return UserProfile.findOneAndUpdate({ userId }, data, { new: true, upsert: true });
 }
 
+async function findProfilesByUserIds(userIds) {
+    return UserProfile.find({ userId: { $in: userIds } }, { userId: 1, avatarUrl: 1, _id: 0 });
+}
+
 // -------------- Instructor Application -------------- //
 async function createInstructorApplication(data) {
     return InstructorApplication.create(data);
@@ -24,8 +28,8 @@ async function findApplicationByUserId(userId) {
     return InstructorApplication.findOne({ userId }).sort({ createdAt: -1 });
 }
 
-async function findApplicationById(id) {
-    return InstructorApplication.findById(id);
+async function findApplicationById(userId) {
+    return InstructorApplication.findOne({ userId });
 }
 
 async function updateApplicationStatus(id, status, reviewerId) {
@@ -66,6 +70,7 @@ module.exports = {
     findProfileByUserId,
     createProfile,
     updateProfile,
+    findProfilesByUserIds,
     createInstructorApplication,
     findApplicationByUserId,
     findApplicationById,

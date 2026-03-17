@@ -72,6 +72,42 @@ async function reviewApplication(call, callback) {
     }
 }
 
+function mapApplicationData(data = {}) {
+    return {
+        fullName: data.fullName || '',
+        birthDate: data.birthDate ? new Date(data.birthDate).toISOString() : '',
+        headline: data.headline || '',
+        experience: data.experience || '',
+        expertise: Array.isArray(data.expertise) ? data.expertise : [],
+        educationLevel: data.educationLevel || '',
+        teachingTopics: Array.isArray(data.teachingTopics) ? data.teachingTopics : [],
+        portfolioUrl: data.portfolioUrl || '',
+        certificateUrls: Array.isArray(data.certificateUrls) ? data.certificateUrls : [],
+        idCardUrl: data.idCardUrl || '',
+    };
+}
+
+async function getApplication(call, callback) {
+    try {
+        const { applicationId } = call.request;
+        const application = await userService.getApplicationById(applicationId);
+
+        callback(null, {
+            userId: application.userId,
+            data: mapApplicationData(application.data),
+            status: application.status,
+            reviewerId: application.reviewerId || '',
+            reviewedAt: application.reviewedAt ? application.reviewedAt.toISOString() : '',
+            createdAt: application.createdAt ? application.createdAt.toISOString() : '',
+            updatedAt: application.updatedAt ? application.updatedAt.toISOString() : '',
+        });
+    } catch (err) {
+        logger.error('gRPC GetApplication error:', err.message);
+        const code = err.statusCode === 404 ? grpc.status.NOT_FOUND : grpc.status.INTERNAL;
+        callback({ code, message: err.message });
+    }
+}
+
 async function listApplications(call, callback) {
     try {
         const { status, page, limit } = call.request;
@@ -85,6 +121,7 @@ async function listApplications(call, callback) {
                 fullName: app.data?.fullName || '',
                 headline: app.data?.headline || '',
                 createdAt: app.createdAt?.toISOString() || '',
+                avatarUrl: app.avatarUrl || '',
             })),
             total: result.total,
             page: result.page,
@@ -103,6 +140,7 @@ function startGrpcServer(port) {
         updateInstructorStatus,
         reviewApplication,
         listApplications,
+        getApplication,
     });
 
     server.bindAsync(`0.0.0.0:${port}`, grpc.ServerCredentials.createInsecure(), (err, boundPort) => {

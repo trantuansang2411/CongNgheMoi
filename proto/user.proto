@@ -7,6 +7,7 @@ service UserService {
   rpc UpdateInstructorStatus (UpdateInstructorStatusRequest) returns (UpdateInstructorStatusResponse);
   rpc ReviewApplication (ReviewApplicationRequest) returns (ReviewApplicationResponse);
   rpc ListApplications (ListApplicationsRequest) returns (ListApplicationsResponse);
+  rpc GetApplication (GetApplicationRequest) returns (ApplicationDetail);
 }
 
 message GetUserProfileRequest {
@@ -43,6 +44,10 @@ message ReviewApplicationResponse {
   string user_id = 3;
 }
 
+message GetApplicationRequest {
+  string application_id = 1;
+}
+
 message ListApplicationsRequest {
   string status = 1;   // PENDING
   int32 page = 2;
@@ -56,6 +61,30 @@ message ApplicationItem {
   string full_name = 4;
   string headline = 5;
   string created_at = 6;
+  string avatar_url = 7;
+}
+
+message ApplicationData {
+  string full_name = 1;
+  string birth_date = 2;
+  string headline = 3;
+  string experience = 4;
+  repeated string expertise = 5;
+  string education_level = 6;
+  repeated string teaching_topics = 7;
+  string portfolio_url = 8;
+  repeated string certificate_urls = 9;
+  string id_card_url = 10;
+}
+
+message ApplicationDetail {
+  string user_id = 1;
+  ApplicationData data = 2;
+  string status = 3;
+  string reviewer_id = 4;
+  string reviewed_at = 5;
+  string created_at = 6;
+  string updated_at = 7;
 }
 
 message ListApplicationsResponse {

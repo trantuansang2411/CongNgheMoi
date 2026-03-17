@@ -43,6 +43,8 @@ async function updateCourse(courseId, instructorId, data) {
     const course = await repo.findByCourseId(courseId);
     if (!course) throw new NotFoundError('Course not found');
     if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
+    if (course.status === 'PUBLISHED') throw new BadRequestError('Published course cannot be edited');
+    if (course.status === 'SUBMITTED') throw new BadRequestError('Submitted course cannot be edited');
     return repo.updateCourse(courseId, data);
 }
 
@@ -50,6 +52,8 @@ async function deleteCourse(courseId, instructorId) {
     const course = await repo.findByCourseId(courseId);
     if (!course) throw new NotFoundError('Course not found');
     if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
+    if (course.status === 'PUBLISHED') throw new BadRequestError('Published course cannot be deleted');
+    if (course.status === 'SUBMITTED') throw new BadRequestError('Submitted course cannot be deleted');
     return repo.softDeleteCourse(courseId);
 }
 
