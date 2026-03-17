@@ -4,6 +4,18 @@ const path = require('path');
 const paymentService = require('../services/payment.service');
 const logger = require('../../shared/utils/logger');
 
+function toGrpcError(err) {
+    const codeByStatus = {
+        400: grpc.status.INVALID_ARGUMENT,
+        401: grpc.status.UNAUTHENTICATED,
+        403: grpc.status.PERMISSION_DENIED,
+        404: grpc.status.NOT_FOUND,
+        409: grpc.status.ALREADY_EXISTS,
+    };
+    const mappedCode = codeByStatus[err.statusCode] || grpc.status.INTERNAL;
+    return { code: mappedCode, message: err.message };
+}
+
 const PROTO_PATH = path.join(__dirname, '../../proto/payment.proto');
 // Hàm startGrpcServer để khởi động một server gRPC, lắng nghe các yêu cầu từ các dịch vụ khác trong hệ thống,
 // và xử lý các yêu cầu đó bằng cách gọi các hàm tương ứng trong paymentService.
@@ -29,7 +41,7 @@ function startGrpcServer(port) {
                 });
             } catch (err) {
                 logger.error('gRPC createPaymentIntent error:', err.message);
-                callback({ code: grpc.status.INTERNAL, message: err.message });
+                callback(toGrpcError(err));
             }
         },
         getPaymentStatus: async (call, callback) => {
@@ -43,7 +55,7 @@ function startGrpcServer(port) {
                 });
             } catch (err) {
                 logger.error('gRPC getPaymentStatus error:', err.message);
-                callback({ code: grpc.status.NOT_FOUND, message: err.message });
+                callback(toGrpcError(err));
             }
         },
     });

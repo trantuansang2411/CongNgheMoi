@@ -69,6 +69,14 @@ async function publishCourse(courseId) { // gRPC
     const updated = await repo.updateStatus(courseId, 'PUBLISHED', { publishedAt: new Date() });
 
     try {
+        // Query sections & lessons to enrich the event payload.
+        // learning-service will use these to build a CourseSnapshot (removing gRPC dependency).
+        // search-service and notification-service are NOT affected — they only read their own fields.
+        const [sections, lessons] = await Promise.all([
+            repo.findSectionsByCourse(courseId),
+            repo.findLessonsByCourse(courseId),
+        ]);
+
         await publishEvent('course.published', {
             courseId: updated.courseId,
             title: updated.title,
@@ -91,6 +99,20 @@ async function publishCourse(courseId) { // gRPC
             thumbnailUrl: updated.thumbnailUrl,
 
             publishedAt: updated.publishedAt,
+
+            // --- Extended payload for learning-service snapshot (backward-compatible) ---
+            sections: sections.map(s => ({
+                sectionId: s._id.toString(),
+                title: s.title,
+                orderIndex: s.orderIndex,
+            })),
+            lessons: lessons.map(l => ({
+                lessonId: l._id.toString(),
+                sectionId: l.sectionId ? l.sectionId.toString() : '',
+                title: l.title,
+                orderIndex: l.orderIndex,
+                durationSec: l.durationSec || 0,
+            })),
         });
     } catch (err) {
         logger.error('Failed to publish course.published event:', err.message);

@@ -32,9 +32,15 @@ async function start() {
         await mongoose.connect(`${MONGO_URI}/learning_db`);
         logger.info('Learning Service connected to MongoDB');
         await rabbitmq.connect(RABBITMQ_URL);
-        // Đăng ký subscriber để lắng nghe sự kiện 'order.paid' từ RabbitMQ, khi nhận được sự kiện này, 
-        //hàm handleOrderPaid sẽ được gọi để cấp quyền truy cập vào khóa học cho sinh viên tương ứng
-        await rabbitmq.subscribe('learning-service', 'order.paid', (msg) => learningService.handleOrderPaid(msg.data));
+
+        // Ghi danh học viên khi thanh toán thành công
+        await rabbitmq.subscribe('learning-service', 'order.paid',
+            (msg) => learningService.handleOrderPaid(msg.data));
+
+        // Lưu snapshot khoá học khi được publish → loại bỏ gRPC dependency
+        await rabbitmq.subscribe('learning-service', 'course.published',
+            (msg) => learningService.handleCoursePublished(msg.data));
+
         startGrpcServer(GRPC_PORT);
         app.listen(PORT, () => logger.info(`Learning Service running on port ${PORT}`));
     } catch (err) {

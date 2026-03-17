@@ -1,6 +1,14 @@
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
+const {
+    BadRequestError,
+    UnauthorizedError,
+    ForbiddenError,
+    NotFoundError,
+    ConflictError,
+    InternalError,
+} = require('../../../shared/utils/errors');
 // Hàm createClient để tạo một client gRPC cho một dịch vụ cụ thể dựa trên file proto, 
 // tên package, tên service và địa chỉ host của dịch vụ đó.
 function createClient(protoFile, packageName, serviceName, host) {
@@ -17,7 +25,24 @@ function createClient(protoFile, packageName, serviceName, host) {
 function promisify(client, method) {
     return (request) => new Promise((resolve, reject) => {
         client[method](request, { deadline: new Date(Date.now() + 5000) }, (err, response) => {
-            if (err) reject(err); else resolve(response);
+            if (!err) return resolve(response);
+
+            switch (err.code) {
+                case grpc.status.INVALID_ARGUMENT:
+                case grpc.status.FAILED_PRECONDITION:
+                case grpc.status.OUT_OF_RANGE:
+                    return reject(new BadRequestError(err.message));
+                case grpc.status.UNAUTHENTICATED:
+                    return reject(new UnauthorizedError(err.message));
+                case grpc.status.PERMISSION_DENIED:
+                    return reject(new ForbiddenError(err.message));
+                case grpc.status.NOT_FOUND:
+                    return reject(new NotFoundError(err.message));
+                case grpc.status.ALREADY_EXISTS:
+                    return reject(new ConflictError(err.message));
+                default:
+                    return reject(new InternalError(err.message || 'Upstream gRPC error'));
+            }
         });
     });
 }
