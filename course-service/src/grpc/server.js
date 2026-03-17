@@ -11,16 +11,6 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 });
 const courseProto = grpc.loadPackageDefinition(packageDefinition).course;
 
-async function getCoursePrice(call, callback) {
-    try {
-        const data = await courseService.getCoursePrice(call.request.courseId);
-        callback(null, data);
-    } catch (err) {
-        logger.error('gRPC GetCoursePrice error:', err.message);
-        callback({ code: grpc.status.NOT_FOUND, message: err.message });
-    }
-}
-
 async function validateCoupon(call, callback) {
     try {
         const result = await courseService.validateCoupon(call.request.courseId, call.request.code);
@@ -39,8 +29,9 @@ async function getCourseBasicInfo(call, callback) {
             title: course.title,
             instructorId: course.instructorId,
             totalLessons: course.totalLessons,
-            price: course.salePrice > 0 ? course.salePrice : course.basePrice,
             status: course.status,
+            basePrice: course.basePrice || 0,
+            salePrice: course.salePrice || 0,
         });
     } catch (err) {
         callback({ code: grpc.status.NOT_FOUND, message: err.message });
@@ -150,7 +141,6 @@ async function markCourseNeedsFixesGrpc(call, callback) {
 function startGrpcServer(port) {
     const server = new grpc.Server();
     server.addService(courseProto.CourseService.service, {
-        getCoursePrice,
         validateCoupon,
         getCourseBasicInfo,
         listSubmittedCourses,

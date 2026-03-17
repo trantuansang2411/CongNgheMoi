@@ -106,21 +106,21 @@ async function findSectionsByCourse(courseId) {
     return Section.find({ courseId }).sort({ orderIndex: 1 });
 }
 
-async function findSectionById(id) {
-    return Section.findById(id);
+async function findSectionById(sectionId) {
+    return Section.findOne({ sectionId });
 }
 
-async function updateSection(id, data) {
-    return Section.findByIdAndUpdate(id, data, { new: true });
+async function updateSection(sectionId, data) {
+    return Section.findOneAndUpdate({ sectionId }, data, { new: true });
 }
 
-async function removeSection(id) {
-    return Section.findByIdAndDelete(id);
+async function removeSection(sectionId) {
+    return Section.findOneAndDelete({ sectionId });
 }
 
 async function reorderSections(courseId, orderedIds) {
     const ops = orderedIds.map((id, index) =>
-        Section.findByIdAndUpdate({ _id: id, courseId },  // filter nếu chỉ cần lọc theo id thôi thì không cần _id: id nếu thêm 1 điều kiện thì cần thêm _id: id
+        Section.findOneAndUpdate({ _id: id, courseId },  // filter nếu chỉ cần lọc theo id thôi thì không cần _id: id nếu thêm 1 điều kiện thì cần thêm _id: id
             { orderIndex: index }, // update
             { new: true } // options
         )
@@ -141,21 +141,21 @@ async function findLessonsByCourse(courseId) {
     return Lesson.find({ courseId }).sort({ orderIndex: 1 });
 }
 
-async function findLessonById(id) {
-    return Lesson.findById(id);
+async function findLessonById(lessonId) {
+    return Lesson.findOne({ lessonId });
 }
 
-async function updateLesson(id, data) {
-    return Lesson.findByIdAndUpdate(id, data, { new: true });
+async function updateLesson(lessonId, data) {
+    return Lesson.findOneAndUpdate({ lessonId }, data, { new: true });
 }
 
-async function removeLesson(id) {
-    return Lesson.findByIdAndDelete(id);
+async function removeLesson(lessonId) {
+    return Lesson.findOneAndDelete({ lessonId });
 }
 
 async function reorderLessons(sectionId, orderedIds) {
     const ops = orderedIds.map((id, index) =>
-        Lesson.findByIdAndUpdate({ _id: id, sectionId }, { orderIndex: index }, { new: true })
+        Lesson.findOneAndUpdate({ _id: id, sectionId }, { orderIndex: index }, { new: true })
     );
     return Promise.all(ops);
 }
@@ -173,16 +173,16 @@ async function findResourcesByLesson(lessonId) {
     return LessonResource.find({ lessonId, deletedAt: null });
 }
 
-async function findResourceById(id) {
-    return LessonResource.findById(id);
+async function findResourceById(lessonResourceId) {
+    return LessonResource.findOne({ resourceId: lessonResourceId });
 }
 
-async function updateResource(id, data) {
-    return LessonResource.findByIdAndUpdate(id, data, { new: true });
+async function updateResource(lessonResourceId, data) {
+    return LessonResource.findOneAndUpdate({ resourceId: lessonResourceId }, data, { new: true });
 }
 
-async function softDeleteResource(id) {
-    return LessonResource.findByIdAndUpdate(id, { deletedAt: new Date() }, { new: true });
+async function softDeleteResource(lessonResourceId) {
+    return LessonResource.findOneAndUpdate({ resourceId: lessonResourceId }, { deletedAt: new Date() }, { new: true });
 }
 
 // ============ COUPON ============

@@ -4,6 +4,36 @@ const logger = require('../../shared/utils/logger');
 const { BadRequestError, NotFoundError } = require('../../shared/utils/errors');
 const { v4: uuidv4 } = require('uuid');
 
+function isPlaceholderCredential(value) {
+    return !value || /^your[_-]/i.test(String(value));
+}
+
+function normalizeMomoEndpoint(rawEndpoint) {
+    const endpoint = String(rawEndpoint || 'https://test-payment.momo.vn/v2/gateway/api').trim().replace(/\/+$/, '');
+    const isLegacyV1 = /\/api\/v1\/checkout$/i.test(endpoint);
+    if (isLegacyV1) {
+        return { endpoint: `${endpoint}/`, isLegacyV1: true };
+    }
+    if (/\/v2\/gateway\/api\/create$/i.test(endpoint)) {
+        return { endpoint, isLegacyV1: false };
+    }
+    return { endpoint: `${endpoint}/create`, isLegacyV1: false };
+}
+
+function resolveMomoWebhookUrl(rawBaseOrFullUrl) {
+    const fallback = 'http://localhost:3006/api/v1/payments/webhook/momo';
+    if (!rawBaseOrFullUrl) return fallback;
+
+    const normalized = String(rawBaseOrFullUrl).trim().replace(/\/+$/, '');
+    if (!normalized) return fallback;
+
+    if (/\/api\/v1\/payments\/webhook\/momo$/i.test(normalized)) {
+        return normalized;
+    }
+
+    return `${normalized}/api/v1/payments/webhook/momo`;
+}
+
 // ============ PROVIDER ADAPTERS ============
 const providers = {
     MOCK: {
@@ -56,25 +86,74 @@ const providers = {
             const partnerCode = process.env.MOMO_PARTNER_CODE;
             const accessKey = process.env.MOMO_ACCESS_KEY;
             const secretKey = process.env.MOMO_SECRET_KEY;
-            const endpoint = process.env.MOMO_ENDPOINT || 'https://test-payment.momo.vn/v2/gateway/api';
+
+            if (isPlaceholderCredential(partnerCode) || isPlaceholderCredential(accessKey) || isPlaceholderCredential(secretKey)) {
+                throw new BadRequestError('MoMo credentials are missing/placeholder. Please set MOMO_PARTNER_CODE, MOMO_ACCESS_KEY, MOMO_SECRET_KEY');
+            }
+
+            const amount = Math.round(Number(intent.amount));
+            if (!Number.isFinite(amount) || amount <= 0) {
+                throw new BadRequestError('Invalid payment amount for MoMo');
+            }
+
+            const { endpoint, isLegacyV1 } = normalizeMomoEndpoint(process.env.MOMO_ENDPOINT);
             const requestId = uuidv4();
             const orderId = `${intent.id}_${Date.now()}`;
             const orderInfo = intent.type === 'TOPUP' ? 'Wallet Top-up' : `Order Payment ${intent.orderId}`;
             const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/success`;
-            const ipnUrl = `${process.env.PAYMENT_WEBHOOK_URL || 'http://localhost:3006'}/api/v1/payments/webhook/momo`;
-            const amount = Number(intent.amount);
+            const ipnUrl = resolveMomoWebhookUrl(process.env.MOMO_WEBHOOK_URL || process.env.PAYMENT_WEBHOOK_URL);
+            if (/localhost|127\.0\.0\.1/i.test(ipnUrl)) {
+                logger.warn('MoMo webhook URL is localhost; MoMo servers cannot call local addresses', { ipnUrl });
+            }
             const extraData = Buffer.from(JSON.stringify({ paymentIntentId: intent.id })).toString('base64');
-            const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=payWithMethod`;
+
+            const payload = isLegacyV1
+                ? {
+                    partnerCode,
+                    accessKey,
+                    requestId,
+                    amount: String(amount),
+                    orderId,
+                    orderInfo,
+                    returnUrl: redirectUrl,
+                    notifyUrl: ipnUrl,
+                    extraData,
+                }
+                : {
+                    partnerCode,
+                    requestId,
+                    amount: String(amount),
+                    orderId,
+                    orderInfo,
+                    redirectUrl,
+                    ipnUrl,
+                    requestType: process.env.MOMO_REQUEST_TYPE || 'captureWallet',
+                    extraData,
+                    lang: 'vi',
+                };
+
+            const rawSignature = isLegacyV1
+                ? `partnerCode=${partnerCode}&accessKey=${accessKey}&requestId=${requestId}&amount=${payload.amount}&orderId=${orderId}&orderInfo=${orderInfo}&returnUrl=${redirectUrl}&notifyUrl=${ipnUrl}&extraData=${extraData}`
+                : `accessKey=${accessKey}&amount=${payload.amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${payload.requestType}`;
+
             const signature = crypto.createHmac('sha256', secretKey).update(rawSignature).digest('hex');
-            const response = await axios.post(`${endpoint}/create`, {
-                partnerCode, requestId, amount, orderId, orderInfo, redirectUrl, ipnUrl,
-                requestType: 'payWithMethod', extraData, lang: 'vi', signature,
-            });
+            payload.signature = signature;
+
+            let response;
+            try {
+                response = await axios.post(endpoint, payload, { timeout: 15000 });
+            } catch (err) {
+                const providerMessage = err.response?.data?.message || err.message;
+                const providerCode = err.response?.data?.resultCode;
+                throw new BadRequestError(`MoMo request failed${providerCode !== undefined ? ` [${providerCode}]` : ''}: ${providerMessage}`);
+            }
+
             if (response.data.resultCode !== 0) throw new BadRequestError(`MoMo error: ${response.data.message}`);
             return { providerIntentId: response.data.orderId, checkoutUrl: response.data.payUrl, autoSucceed: false };
         },
         async handleWebhook(body) {
-            return { eventType: body.resultCode === 0 ? 'payment.succeeded' : 'payment.failed', data: body };
+            const resultCode = Number(body?.resultCode);
+            return { eventType: resultCode === 0 ? 'payment.succeeded' : 'payment.failed', data: body };
         },
     },
 };
@@ -146,7 +225,14 @@ async function handleWebhook(provider, body, headers) {
     } else if (provider === 'MOMO') {
         // Đối với MoMo, chúng ta có thể mã hóa thông tin paymentIntentId trong trường extraData của webhook,
         // và giải mã nó từ base64 để lấy paymentIntentId.
-        const extraData = data.extraData ? JSON.parse(Buffer.from(data.extraData, 'base64').toString()) : {};
+        let extraData = {};
+        if (data.extraData) {
+            try {
+                extraData = JSON.parse(Buffer.from(data.extraData, 'base64').toString());
+            } catch (_e) {
+                logger.warn('MoMo webhook extraData is not valid base64 JSON');
+            }
+        }
         paymentIntentId = extraData.paymentIntentId;
     }
 
