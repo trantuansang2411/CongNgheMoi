@@ -27,13 +27,14 @@ model Account {
   passwordHash String?  @map("password_hash")
   provider     String   @default("LOCAL") @db.VarChar(16) // LOCAL | GOOGLE
   providerId   String?  @map("provider_id") // việc sài @map(("provider_id")) là để đặt tên cột trong DB là provider_id thay vì providerId(là sử dụng trong code khi gọi ra)
-  status       String   @default("ACTIVE") @db.VarChar(16) // ACTIVE | LOCKED | BANNED // LOCKED là khi login sai nhiều lần mình sẽ lock bao nhiêu phút đó
+  status       String   @default("PENDING_VERIFICATION") @db.VarChar(32) // PENDING_VERIFICATION | ACTIVE | LOCKED | BANNED
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
-  accountRoles  AccountRole[] // Một User có nhiều Role
-  refreshTokens RefreshToken[] // Một User có nhiều RefreshToken Dấu [] = mảng = quan hệ nhiều.
-  passwordResetTokens PasswordResetToken[] // Một User có nhiều PasswordResetToken
+  accountRoles          AccountRole[] // Một User có nhiều Role
+  refreshTokens         RefreshToken[] // Một User có nhiều RefreshToken Dấu [] = mảng = quan hệ nhiều.
+  passwordResetTokens   PasswordResetToken[] // Một User có nhiều PasswordResetToken
+  emailVerificationOtps EmailVerificationOtp[] // Một User có nhiều OTP xác thực email
 
   @@map("accounts") // @@map("accounts") là để đặt tên bảng trong DB là accounts thay vì Account(là sử dụng trong code khi gọi ra)
 }
@@ -86,4 +87,22 @@ model PasswordResetToken {
   @@index([accountId])
   @@index([tokenHash])
   @@map("password_reset_tokens")
+}
+
+model EmailVerificationOtp {
+  id         String    @id @default(uuid()) @db.Uuid
+  accountId  String    @map("account_id") @db.Uuid
+  codeHash   String    @map("code_hash") @db.VarChar(255)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz()
+  usedAt     DateTime? @map("used_at") @db.Timestamptz()
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz()
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  attempts   Int       @default(0)
+  purpose    String    @default("REGISTER") @db.VarChar(32)
+
+  account Account @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@index([expiresAt])
+  @@map("email_verification_otps")
 }

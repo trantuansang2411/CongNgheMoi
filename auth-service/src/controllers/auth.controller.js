@@ -9,6 +9,24 @@ async function register(req, res, next) {
     }
 }
 
+async function verifyRegistrationOtp(req, res, next) {
+    try {
+        const result = await authService.verifyRegistrationOtp(req.body);
+        res.json({ success: true, data: result });
+    } catch (err) {
+        next(err);
+    }
+}
+
+async function resendRegistrationOtp(req, res, next) {
+    try {
+        const result = await authService.resendRegistrationOtp(req.body);
+        res.json({ success: true, data: result });
+    } catch (err) {
+        next(err);
+    }
+}
+
 async function login(req, res, next) {
     try {
         const result = await authService.login(req.body);
@@ -67,6 +85,8 @@ async function resetPassword(req, res, next) {
 
 module.exports = {
     register,
+    verifyRegistrationOtp,
+    resendRegistrationOtp,
     login,
     googleLogin,
     refreshToken,
@@ -74,3 +94,4 @@ module.exports = {
     forgotPassword,
     resetPassword,
 };
+
