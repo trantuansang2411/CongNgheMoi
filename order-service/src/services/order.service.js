@@ -11,18 +11,19 @@ async function getCart(studentId) {
 
 async function addToCart(studentId, courseId) {
     // Get canonical pricing from course-service (basePrice/salePrice)
-    const coursePrice = await grpcClients.getCoursePrice({ courseId });
-    if (!coursePrice || !coursePrice.courseId) throw new NotFoundError('Course not found');
+    const courseInfo = await grpcClients.getCourseBasicInfo({ courseId });
+    if (!courseInfo || !courseInfo.courseId) throw new NotFoundError('Course not found');
+    if (courseInfo.status !== 'PUBLISHED') throw new BadRequestError(`Course ${courseId} is not available for purchase`);
 
-    const salePrice = Number(coursePrice.salePrice) || 0;
-    const basePrice = Number(coursePrice.basePrice) || 0;
+    const salePrice = Number(courseInfo.salePrice) || 0;
+    const basePrice = Number(courseInfo.basePrice) || 0;
     const priceSnapshot = salePrice > 0 ? salePrice : basePrice;
 
     return orderRepo.addToCart(studentId, {
         courseId,
-        titleSnapshot: coursePrice.title,
+        titleSnapshot: courseInfo.title,
         priceSnapshot,
-        instructorId: coursePrice.instructorId || null,
+        instructorId: courseInfo.instructorId || null,
     });
 }
 
@@ -37,12 +38,17 @@ async function checkout(studentId, { couponCode, couponCourseId, paymentProvider
 
     // Lấy giá thật từ course-service cho từng item
     const items = await Promise.all(cart.items.map(async (item) => {
-        const priceInfo = await grpcClients.getCoursePrice({ courseId: item.courseId });
-        const originalPrice = Number(priceInfo.salePrice || priceInfo.basePrice);
+        const courseInfo = await grpcClients.getCourseBasicInfo({ courseId: item.courseId });
+        if (!courseInfo || !courseInfo.courseId) throw new NotFoundError(`Course ${item.courseId} not found`);
+        if (courseInfo.status !== 'PUBLISHED') throw new BadRequestError(`Course ${item.courseId} is not available for purchase`);
+
+        const salePrice = Number(courseInfo.salePrice) || 0;
+        const basePrice = Number(courseInfo.basePrice) || 0;
+        const originalPrice = salePrice > 0 ? salePrice : basePrice;
         return {
             courseId: item.courseId,
-            instructorId: item.instructorId || priceInfo.instructorId,
-            titleSnapshot: item.titleSnapshot || priceInfo.title,
+            instructorId: item.instructorId || courseInfo.instructorId,
+            titleSnapshot: item.titleSnapshot || courseInfo.title,
             originalPrice,
             finalPrice: originalPrice,
         };
