@@ -170,20 +170,6 @@ async function getCourseReviewDetail(courseId) {
     return { course, sections, lessons };
 }
 
-async function getCoursePrice(courseId) { // gRPC
-    const course = await repo.findByCourseId(courseId);
-    if (!course) throw new NotFoundError('Course not found');
-    return {
-        courseId: course.courseId,
-        title: course.title,
-        instructorId: course.instructorId,
-        basePrice: course.basePrice,
-        salePrice: course.salePrice,
-        currency: course.currency,
-        status: course.status,
-    };
-}
-
 // ============ SECTION ============
 async function createSection(courseId, instructorId, data) {
     const course = await repo.findByCourseId(courseId);
@@ -339,7 +325,7 @@ module.exports = {
     // Course
     createCourse, getCourse, getInstructorCourses, getPublishedCourses,
     getSubmittedCourses, updateCourse, deleteCourse, submitCourse, publishCourse, markCourseNeedsFixes,
-    previewCourse, getCourseDetail, getCourseReviewDetail, getCoursePrice, updateCourseRating,
+    previewCourse, getCourseDetail, getCourseReviewDetail, updateCourseRating,
     // Section
     createSection, getSections, updateSection, deleteSection, reorderSections,
     // Lesson

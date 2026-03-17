@@ -148,7 +148,7 @@ async function recordWatchSession(studentId, courseId, lessonId, deltaWatchSec) 
         );
     }
 
-    return { recorded: safeDelta };
+    return { recorded: safeDelta, watchTimeSec: enrollment.watchTimeSec + safeDelta };
 }
 
 // ─── Course Completion Check (private) ───────────────────────────────────────

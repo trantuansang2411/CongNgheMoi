@@ -3,27 +3,12 @@ syntax = "proto3";
 package course;
 
 service CourseService {
-  rpc GetCoursePrice (CoursePriceRequest) returns (CoursePriceResponse);
   rpc ValidateCoupon (ValidateCouponRequest) returns (ValidateCouponResponse);
   rpc GetCourseBasicInfo (CourseBasicInfoRequest) returns (CourseBasicInfoResponse);
   rpc ListSubmittedCourses (ListSubmittedCoursesRequest) returns (ListSubmittedCoursesResponse);
   rpc GetCourseReviewDetail (CourseReviewDetailRequest) returns (CourseReviewDetailResponse);
   rpc MarkCourseNeedsFixes (MarkCourseNeedsFixesRequest) returns (MarkCourseNeedsFixesResponse);
   rpc PublishCourse (PublishCourseRequest) returns (PublishCourseResponse);
-}
-
-message CoursePriceRequest {
-  string course_id = 1;
-}
-
-message CoursePriceResponse {
-  string course_id = 1;
-  string title = 2;
-  string instructor_id = 3;
-  double base_price = 4;
-  double sale_price = 5;
-  string currency = 6;
-  string status = 7;
 }
 
 message ValidateCouponRequest {
@@ -48,6 +33,8 @@ message CourseBasicInfoResponse {
   string instructor_id = 3;
   int32 total_lessons = 4;
   string status = 5;
+  double base_price = 6;
+  double sale_price = 7;
 }
 
 message ListSubmittedCoursesRequest {
