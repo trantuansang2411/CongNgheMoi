@@ -5,6 +5,7 @@ const router = Router();
 
 router.use(authenticate, authorize('ADMIN'));
 router.get('/applications', ctrl.listApplications);
+router.get('/applications/:applicationId', ctrl.getApplicationDetail);
 router.get('/courses/submitted', ctrl.listSubmittedCourses);
 router.get('/courses/:courseId/review-detail', ctrl.getCourseReviewDetail);
 router.post('/courses/:courseId/publish', ctrl.publishCourse);

@@ -10,6 +10,7 @@ const banInstructor = async (req, res, next) => { try { res.json({ success: true
 const unbanInstructor = async (req, res, next) => { try { res.json({ success: true, data: await svc.unbanInstructor(req.params.userId) }); } catch (e) { next(e); } };
 
 const listApplications = async (req, res, next) => { try { res.json({ success: true, data: await svc.listApplications(req.query.status, parseInt(req.query.page) || 1, parseInt(req.query.limit) || 20) }); } catch (e) { next(e); } };
+const getApplicationDetail = async (req, res, next) => { try { res.json({ success: true, data: await svc.getApplicationDetail(req.params.applicationId) }); } catch (e) { next(e); } };
 
 module.exports = {
     publishCourse,
@@ -17,6 +18,7 @@ module.exports = {
     listSubmittedCourses,
     getCourseReviewDetail,
     listApplications,
+    getApplicationDetail,
     approveInstructor,
     rejectInstructor,
     banInstructor,

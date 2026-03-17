@@ -26,6 +26,10 @@ async function listApplications(status, page, limit) {
     return result;
 }
 
+async function getApplicationDetail(applicationId) {
+    return grpcClients.getApplication({ applicationId });
+}
+
 async function approveInstructor(userId, reviewerId) {
     // 1. Duyệt đơn trong User Service (tạo InstructorProfile)
     const result = await grpcClients.reviewApplication({
@@ -72,6 +76,7 @@ module.exports = {
     listSubmittedCourses,
     getCourseReviewDetail,
     listApplications,
+    getApplicationDetail,
     approveInstructor,
     rejectInstructor,
     banInstructor,

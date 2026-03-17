@@ -54,6 +54,14 @@ async function getApplication(userId) {
     return application;
 }
 
+async function getApplicationById(applicationId) {
+    const application = await userRepo.findApplicationById(applicationId);
+    if (!application) {
+        throw new NotFoundError('Application not found');
+    }
+    return application;
+}
+
 async function reviewApplication(applicationId, status, reviewerId) {
     const application = await userRepo.findApplicationById(applicationId);
     if (!application) {
@@ -83,7 +91,22 @@ async function reviewApplication(applicationId, status, reviewerId) {
 }
 
 async function listApplications(filter, page, limit) {
-    return userRepo.listApplications(filter, page, limit);
+    const result = await userRepo.listApplications(filter, page, limit);
+
+    const userIds = [...new Set(result.items.map((item) => item.userId).filter(Boolean))];
+    const profiles = userIds.length > 0 ? await userRepo.findProfilesByUserIds(userIds) : [];
+    const avatarMap = new Map(profiles.map((profile) => [profile.userId, profile.avatarUrl || '']));
+
+    return {
+        ...result,
+        items: result.items.map((item) => {
+            const plainItem = typeof item.toObject === 'function' ? item.toObject() : item;
+            return {
+                ...plainItem,
+                avatarUrl: avatarMap.get(item.userId) || '',
+            };
+        }),
+    };
 }
 
 async function getInstructorProfile(userId) {
@@ -122,6 +145,7 @@ module.exports = {
     updateProfile,
     applyInstructor,
     getApplication,
+    getApplicationById,
     reviewApplication,
     listApplications,
     getInstructorProfile,
