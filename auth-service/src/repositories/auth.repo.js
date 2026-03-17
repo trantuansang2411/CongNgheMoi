@@ -10,7 +10,7 @@ const ROLE_IDS = {
     ADMIN: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14',
 };
 
-async function createAccount({ email, passwordHash, provider = 'LOCAL', providerId = null }) {
+async function createAccount({ email, passwordHash, provider = 'LOCAL', providerId = null, status = 'PENDING_VERIFICATION' }) {
     return prisma.account.create({
         data: {
             id: uuidv4(),
@@ -18,6 +18,7 @@ async function createAccount({ email, passwordHash, provider = 'LOCAL', provider
             passwordHash,
             provider,
             providerId,
+            status,
             accountRoles: {
                 create: { roleId: ROLE_IDS.STUDENT }, // Tạo 1 record trong bảng trung gian account_roles
             },
@@ -112,6 +113,56 @@ async function updatePassword(accountId, passwordHash) {
     });
 }
 
+// =============================================
+// OTP Verification Functions
+// =============================================
+
+async function createEmailVerificationOtp({ accountId, codeHash, expiresAt, purpose = 'REGISTER' }) {
+    return prisma.emailVerificationOtp.create({
+        data: { id: uuidv4(), accountId, codeHash, expiresAt, purpose },
+    });
+}
+
+async function findLatestOtpByAccountId(accountId) {
+    return prisma.emailVerificationOtp.findFirst({
+        where: {
+            accountId,
+            usedAt: null,
+            revokedAt: null,
+            expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: 'desc' },
+    });
+}
+
+async function incrementOtpAttempts(otpId) {
+    return prisma.emailVerificationOtp.update({
+        where: { id: otpId },
+        data: { attempts: { increment: 1 } },
+    });
+}
+
+async function markOtpUsed(otpId) {
+    return prisma.emailVerificationOtp.update({
+        where: { id: otpId },
+        data: { usedAt: new Date() },
+    });
+}
+
+async function revokeOtp(otpId) {
+    return prisma.emailVerificationOtp.update({
+        where: { id: otpId },
+        data: { revokedAt: new Date() },
+    });
+}
+
+async function revokeAllOtps(accountId) {
+    return prisma.emailVerificationOtp.updateMany({
+        where: { accountId, usedAt: null, revokedAt: null },
+        data: { revokedAt: new Date() },
+    });
+}
+
 module.exports = {
     prisma,
     ROLE_IDS,
@@ -128,4 +179,11 @@ module.exports = {
     findPasswordResetToken,
     markPasswordResetTokenUsed,
     updatePassword,
+    createEmailVerificationOtp,
+    findLatestOtpByAccountId,
+    incrementOtpAttempts,
+    markOtpUsed,
+    revokeOtp,
+    revokeAllOtps,
 };
+
