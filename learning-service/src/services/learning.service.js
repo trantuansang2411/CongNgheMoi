@@ -14,6 +14,14 @@ const LESSON_COMPLETE_PCT        = 90;   // % of lessons completed required
 const WATCH_TIME_PCT             = 0.70; // 70% of total course duration required
 const IS_DEV = (process.env.NODE_ENV || 'dev') === 'dev'; // skip cooldown in dev for Postman testing
 
+function _getValidLessonIds(snapshot) {
+    return (snapshot.lessons || []).map(l => l.lessonId).filter(Boolean);
+}
+
+function _isLessonInSnapshot(snapshot, lessonId) {
+    return _getValidLessonIds(snapshot).includes(lessonId);
+}
+
 // ─── Queries ─────────────────────────────────────────────────────────────────
 
 /**
@@ -64,27 +72,62 @@ async function markLessonComplete(studentId, courseId, lessonId) {
     const totalLessons = snapshot.totalLessons || 0;
     if (totalLessons <= 0) throw new BadRequestError('Course has no lessons');
 
-    // 3. Đánh dấu bài học hoàn thành (upsert, idempotent)
-    await LessonProgress.findOneAndUpdate(
+    if (!_isLessonInSnapshot(snapshot, lessonId)) {
+        throw new BadRequestError('lessonId does not belong to this course');
+    }
+
+    // 3. Idempotent: chỉ set completed nếu lesson chưa hoàn thành.
+    const existingProgress = await LessonProgress.findOne(
         { studentId, courseId, lessonId },
-        { $set: { completed: true, completedAt: new Date() } },
-        { upsert: true, new: true }
-    );
+        { completed: 1 }
+    ).lean();
+
+    if (!existingProgress) {
+        try {
+            await LessonProgress.create({
+                studentId,
+                courseId,
+                lessonId,
+                completed: true,
+                completedAt: new Date(),
+            });
+        } catch (err) {
+            // Trường hợp race condition: request khác đã tạo record trước.
+            if (err?.code !== 11000) throw err;
+        }
+    } else if (!existingProgress.completed) {
+        await LessonProgress.updateOne(
+            { studentId, courseId, lessonId, completed: false },
+            { $set: { completed: true, completedAt: new Date() } }
+        );
+    }
 
     // 4. Tính lại % tiến độ
-    const completedCount = await LessonProgress.countDocuments({ studentId, courseId, completed: true });
-    const progressPercent = Math.round((completedCount / totalLessons) * 100);
+    const validLessonIds = _getValidLessonIds(snapshot);
+    const completedQuery = { studentId, courseId, completed: true };
+    if (validLessonIds.length > 0) completedQuery.lessonId = { $in: validLessonIds };
+
+    const completedCount = await LessonProgress.countDocuments(completedQuery);
+    const progressPercent = Math.min(100, Math.round((completedCount / totalLessons) * 100));
 
     // 5. Lưu % tiến độ vào Enrollment
-    enrollment.progressPercent = progressPercent;
-    await enrollment.save();
+    if (enrollment.progressPercent !== progressPercent) {
+        enrollment.progressPercent = progressPercent;
+        await enrollment.save();
+    }
 
-    // 6. Kiểm tra hoàn thành khoá học (fire-and-forget, không block response)
-    _checkCourseCompletion(studentId, courseId, enrollment, snapshot).catch(err =>
-        logger.error(`_checkCourseCompletion error: student=${studentId}, course=${courseId}`, err.message)
-    );
+    // 6. Chỉ check completion ở mốc có ý nghĩa: sau khi complete lesson.
+    await _checkCourseCompletion(studentId, courseId, enrollment, snapshot);
 
-    return { progressPercent, completed: enrollment.status === 'COMPLETED' };
+    const refreshedEnrollment = await Enrollment.findOne(
+        { studentId, courseId },
+        { status: 1, progressPercent: 1 }
+    ).lean();
+
+    return {
+        progressPercent: refreshedEnrollment?.progressPercent ?? progressPercent,
+        completed: refreshedEnrollment?.status === 'COMPLETED',
+    };
 }
 
 // ─── Watch Time Heartbeat ────────────────────────────────────────────────────
@@ -109,7 +152,7 @@ async function recordWatchSession(studentId, courseId, lessonId, deltaWatchSec) 
     }
 
     // Kiểm tra ghi danh
-    const enrollment = await Enrollment.findOne({ studentId, courseId }).lean();
+    const enrollment = await Enrollment.exists({ studentId, courseId });
     if (!enrollment) throw new NotFoundError('Not enrolled in this course');
 
     // ── Cooldown check (bỏ qua khi NODE_ENV=dev để dễ test Postman) ──────────
@@ -131,24 +174,16 @@ async function recordWatchSession(studentId, courseId, lessonId, deltaWatchSec) 
     const safeDelta = Math.min(Math.floor(deltaWatchSec), MAX_HEARTBEAT_SEC);
 
     // Atomic update: cộng dồn watchTimeSec, ghi lại thời điểm heartbeat
-    await LessonProgress.findOneAndUpdate(
+    const updatedLessonProgress = await LessonProgress.findOneAndUpdate(
         { studentId, courseId, lessonId },
         {
             $inc: { watchTimeSec: safeDelta },
             $set: { lastHeartbeatAt: new Date() },
         },
         { upsert: true, new: true }
-    );
+    ).lean();
 
-    // Kiểm tra hoàn thành khoá học (fire-and-forget)
-    const snapshot = await CourseSnapshot.findOne({ courseId }).lean();
-    if (snapshot) {
-        _checkCourseCompletion(studentId, courseId, null, snapshot).catch(err =>
-            logger.error(`_checkCourseCompletion error: student=${studentId}, course=${courseId}`, err.message)
-        );
-    }
-
-    return { recorded: safeDelta, watchTimeSec: enrollment.watchTimeSec + safeDelta };
+    return { recorded: safeDelta, watchTimeSec: updatedLessonProgress.watchTimeSec };
 }
 
 // ─── Course Completion Check (private) ───────────────────────────────────────
@@ -176,18 +211,25 @@ async function _checkCourseCompletion(studentId, courseId, enrollment, snapshot)
 
     const totalLessons     = snapshot.totalLessons || 0;
     const totalDurationSec = snapshot.totalDurationSec || 0;
+    const validLessonIds = _getValidLessonIds(snapshot);
 
     if (totalLessons === 0) return; // khoá học không có bài → bỏ qua
 
     // Đếm số bài đã hoàn thành
-    const completedCount = await LessonProgress.countDocuments({ studentId, courseId, completed: true });
-    const progressPercent = Math.round((completedCount / totalLessons) * 100);
+    const completedQuery = { studentId, courseId, completed: true };
+    if (validLessonIds.length > 0) completedQuery.lessonId = { $in: validLessonIds };
+
+    const completedCount = await LessonProgress.countDocuments(completedQuery);
+    const progressPercent = Math.min(100, Math.round((completedCount / totalLessons) * 100));
 
     if (progressPercent < LESSON_COMPLETE_PCT) return; // chưa đủ % bài hoàn thành
 
     // Tính tổng thời gian xem bằng aggregation (hiệu quả, scalable)
+    const watchMatch = { studentId, courseId };
+    if (validLessonIds.length > 0) watchMatch.lessonId = { $in: validLessonIds };
+
     const [agg] = await LessonProgress.aggregate([
-        { $match: { studentId, courseId } },
+        { $match: watchMatch },
         { $group: { _id: null, totalWatch: { $sum: '$watchTimeSec' } } },
     ]);
     const totalWatchSec = agg ? agg.totalWatch : 0;

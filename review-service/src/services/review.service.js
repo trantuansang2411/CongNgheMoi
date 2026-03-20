@@ -1,9 +1,14 @@
 const Review = require('../models/mongoose/Review.model');
 const { publishEvent } = require('../../shared/events/rabbitmq');
 const logger = require('../../shared/utils/logger');
+const grpcClients = require('../grpc');
 const { NotFoundError, BadRequestError, ConflictError } = require('../../shared/utils/errors');
 
 async function createReview(studentId, { courseId, rating, comment }) {
+    //validate student is enrolled in course
+    const hasEnrolled = await grpcClients.learningService.hasEnrolled(studentId, courseId);
+    if (!hasEnrolled) throw new BadRequestError('Student is not enrolled in this course');
+
     const existing = await Review.findOne({ studentId, courseId });
     if (existing) throw new ConflictError('You have already reviewed this course');
 

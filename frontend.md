@@ -2,6 +2,14 @@
 
 Tài liệu này dùng để prompt AI tạo giao diện frontend bám sát backend microservices hiện tại.
 Mục tiêu là giảm refactor, tránh lệch field, và tránh bug khi nối API qua API Gateway.
+## Tech Stack Foundation
+- Core: React 18,TypeScript , Vite
+- Styling: Tailwind CSS (Sử dụng utility classes)
+- UI Components: Shadcn UI (Radix Primitives)
+- State Management: Zustand (cho global store)
+- Data Fetching: Axios + TanStack React Query v5
+- Routing: React Router v6
+- Form Validation: React Hook Form + Zod
 
 ## 1. Scope
 
@@ -32,6 +40,97 @@ type ApiResponse<T> = ApiSuccess<T> | ApiError;
 Authorization: Bearer <accessToken>
 Content-Type: application/json
 ```
+
+## 1.1 Frontend Architecture Blueprint (Bắt buộc)
+
+Trước khi generate UI, AI phải tạo cấu trúc thư mục rõ ràng để tách UI khỏi data và phân quyền route.
+
+```txt
+src/
+  services/            # hoac api/ core/
+    httpClient.ts
+    interceptors.ts
+    auth.service.ts
+    course.service.ts
+    order.service.ts
+    payment.service.ts
+    learning.service.ts
+    review.service.ts
+    wallet.service.ts
+    notification.service.ts
+  components/          # shared/dumb UI components
+    ui/
+      Button.tsx
+      Input.tsx
+      Modal.tsx
+      Table.tsx
+      EmptyState.tsx
+      ErrorState.tsx
+      LoadingSkeleton.tsx
+  routes/
+    index.tsx
+    ProtectedRoute.tsx
+    RoleGuard.tsx
+  store/
+    auth.store.ts
+    session.store.ts
+    ui.store.ts
+  layouts/
+    PublicLayout.tsx
+    AuthLayout.tsx
+    LearningLayout.tsx
+    DashboardLayout.tsx
+```
+
+### services/ (hoac api/core) - Tram trung chuyen du lieu
+
+- Chua toan bo HTTP calls, khong viet request truc tiep trong page/component.
+- Co `httpClient` trung tam voi `baseURL` tro toi API Gateway.
+- Co request interceptor de dinh kem `Authorization` token.
+- Co response interceptor de:
+  - xu ly refresh token khi het han
+  - map loi 401/403/500 ve `UiError`
+  - phat thong bao loi toan cuc khi can
+
+### components/ (Shared UI) - Design System
+
+- Chiua dumb components, khong goi API, khong chua business logic.
+- Components chi nhan props va render UI.
+- Toan bo theme, color token, spacing, typography duoc dung nhat quan.
+
+### routes/ - Dieu huong va phan quyen
+
+- Dinh nghia route map + route guard.
+- Bat buoc co `ProtectedRoute` de chan nguoi chua dang nhap.
+- Bat buoc co `RoleGuard` de kiem soat `STUDENT/INSTRUCTOR/ADMIN`.
+- Bat buoc lazy load page-level routes de giam initial bundle.
+
+### store/ (Global state)
+
+- Chiua state dung chung toan app, khong chua feature state chi cuc bo.
+- Toi thieu gom:
+  - auth/session state (user, token, roles)
+  - ui state chung (theme, sidebar open, locale)
+- Feature state (cart, review draft, checkout form) dat trong feature modules.
+
+### layouts/ - Bo khung trinh bay
+
+- Chia layout theo nhom trang:
+  - `PublicLayout`
+  - `AuthLayout`
+  - `LearningLayout`
+  - `DashboardLayout`
+- Page nghiep vu chi render noi dung, khong lap lai shell/header/sidebar.
+
+### Definition check cho architecture
+
+Mot frontend duoc xem la dat architecture baseline khi:
+
+- Co day du 5 nhom: `services`, `components`, `routes`, `store`, `layouts`.
+- Khong co API call truc tiep trong shared components.
+- Khong co role-check rải rác trong page ma khong qua route guard.
+- Co lazy loading cho route cap page.
+- Co global store cho auth/session va UI state chung.
 
 ## 2. Non-Negotiable Rules (Bắt buộc)
 
