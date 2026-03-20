@@ -7,7 +7,7 @@ const instructorApplicationSchema = new mongoose.Schema({
         birthDate: { type: Date, required: true }, // ngày sinh
         headline: { type: String, trim: true }, // tagline/giới thiệu ngắn
         experience: { type: String, trim: true, required: true }, // kinh nghiệm
-        expertise: [String], // danh sách chuyên môn
+        expertise: { type: String, trim: true, required: true }, // chuyên môn
         educationLevel: { type: String, trim: true, required: true }, // trình độ học vấn
         teachingTopics: { type: [String], default: [] }, // muốn dạy môn/chủ đề gì
         portfolioUrl: { type: String, trim: true, required: true }, // link portfolio/linkedin/github/website
