@@ -49,13 +49,16 @@ function promisify(client, method) {
 
 const COURSE_HOST = `${process.env.COURSE_SERVICE_HOST || 'localhost'}:${process.env.COURSE_GRPC_PORT || 50053}`;
 const PAYMENT_HOST = `${process.env.PAYMENT_SERVICE_HOST || 'localhost'}:${process.env.PAYMENT_GRPC_PORT || 50056}`;
+const LEARNING_HOST = `${process.env.LEARNING_SERVICE_HOST || 'localhost'}:${process.env.LEARNING_GRPC_PORT || 50058}`;
 
 const courseClient = createClient('course.proto', 'course', 'CourseService', COURSE_HOST);
 const paymentClient = createClient('payment.proto', 'payment', 'PaymentService', PAYMENT_HOST);
+const learningClient = createClient('learning.proto', 'learning', 'LearningService', LEARNING_HOST);
 
 module.exports = {
     getCourseBasicInfo: promisify(courseClient, 'getCourseBasicInfo'),
     validateCoupon: promisify(courseClient, 'validateCoupon'),
     createPaymentIntent: promisify(paymentClient, 'createPaymentIntent'),
     getPaymentStatus: promisify(paymentClient, 'getPaymentStatus'),
+    hasEnrollment: promisify(learningClient, 'hasEnrollment'),
 };

@@ -3,6 +3,23 @@ const { publishEvent } = require('../../shared/events/rabbitmq');
 const logger = require('../../shared/utils/logger');
 const { BadRequestError, NotFoundError } = require('../../shared/utils/errors');
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
+
+const MOMO_IPN_SIGN_FIELDS = [
+    'accessKey',
+    'amount',
+    'extraData',
+    'message',
+    'orderId',
+    'orderInfo',
+    'orderType',
+    'partnerCode',
+    'payType',
+    'requestId',
+    'responseTime',
+    'resultCode',
+    'transId',
+];
 
 function isPlaceholderCredential(value) {
     return !value || /^your[_-]/i.test(String(value));
@@ -34,6 +51,39 @@ function resolveMomoWebhookUrl(rawBaseOrFullUrl) {
     return `${normalized}/api/v1/payments/webhook/momo`;
 }
 
+function buildMomoIpnRawSignature(body, accessKey) {
+    return MOMO_IPN_SIGN_FIELDS
+        .map((field) => {
+            const value = field === 'accessKey' ? accessKey : body?.[field];
+            return `${field}=${value !== undefined && value !== null ? String(value) : ''}`;
+        })
+        .join('&');
+}
+
+function verifyMomoWebhookSignature(body) {
+    const accessKey = process.env.MOMO_ACCESS_KEY;
+    const secretKey = process.env.MOMO_SECRET_KEY;
+    const providedSignature = String(body?.signature || '').trim().toLowerCase();
+
+    if (isPlaceholderCredential(accessKey) || isPlaceholderCredential(secretKey)) {
+        throw new BadRequestError('MoMo webhook verification is not configured. Please set MOMO_ACCESS_KEY and MOMO_SECRET_KEY');
+    }
+
+    if (!providedSignature) {
+        throw new BadRequestError('Missing MoMo webhook signature');
+    }
+
+    const rawSignature = buildMomoIpnRawSignature(body, accessKey);
+    const expectedSignature = crypto.createHmac('sha256', secretKey).update(rawSignature).digest('hex').toLowerCase();
+
+    const providedBuffer = Buffer.from(providedSignature, 'utf8');
+    const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
+
+    if (providedBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(providedBuffer, expectedBuffer)) {
+        throw new BadRequestError('Invalid MoMo webhook signature');
+    }
+}
+
 // ============ PROVIDER ADAPTERS ============
 const providers = {
     MOCK: {
@@ -54,8 +104,8 @@ const providers = {
                     payment_method_types: ['card'],
                     line_items: [{ price_data: { currency: 'vnd', product_data: { name: intent.type === 'TOPUP' ? 'Wallet Top-up' : `Order ${intent.orderId}` }, unit_amount: Number(intent.amount) }, quantity: 1 }],
                     mode: 'payment',
-                    success_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-                    cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/cancel`,
+                    success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+                    cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/cancel`,
                     metadata: { paymentIntentId: intent.id, type: intent.type, orderId: intent.orderId || '' },
                 });
                 // Sau khi tạo phiên thanh toán thành công, hàm sẽ trả về ID của intent do nhà cung cấp tạo ra, 
@@ -81,7 +131,6 @@ const providers = {
         // Tạo một intent thanh toán mới với MoMo, bao gồm việc xây dựng dữ liệu yêu cầu theo định dạng của MoMo,
         // tính toán chữ ký bảo mật và gửi yêu cầu đến API của MoMo để tạo một đơn hàng thanh toán.
         async createIntent(intent) {
-            const crypto = require('crypto');
             const axios = require('axios');
             const partnerCode = process.env.MOMO_PARTNER_CODE;
             const accessKey = process.env.MOMO_ACCESS_KEY;
@@ -100,8 +149,8 @@ const providers = {
             const requestId = uuidv4();
             const orderId = `${intent.id}_${Date.now()}`;
             const orderInfo = intent.type === 'TOPUP' ? 'Wallet Top-up' : `Order Payment ${intent.orderId}`;
-            const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/success`;
-            const ipnUrl = resolveMomoWebhookUrl(process.env.MOMO_WEBHOOK_URL || process.env.PAYMENT_WEBHOOK_URL);
+            const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/success`;
+            const ipnUrl = resolveMomoWebhookUrl(process.env.MOMO_WEBHOOK_URL || 'http://localhost:3000/api/v1/payments/webhook/momo');
             if (/localhost|127\.0\.0\.1/i.test(ipnUrl)) {
                 logger.warn('MoMo webhook URL is localhost; MoMo servers cannot call local addresses', { ipnUrl });
             }
@@ -152,6 +201,7 @@ const providers = {
             return { providerIntentId: response.data.orderId, checkoutUrl: response.data.payUrl, autoSucceed: false };
         },
         async handleWebhook(body) {
+            verifyMomoWebhookSignature(body);
             const resultCode = Number(body?.resultCode);
             return { eventType: resultCode === 0 ? 'payment.succeeded' : 'payment.failed', data: body };
         },
