@@ -2,7 +2,24 @@ const orderRepo = require('../repositories/order.repo');
 const grpcClients = require('../grpc/clients');
 const { publishEvent } = require('../../shared/events/rabbitmq');
 const logger = require('../../shared/utils/logger');
-const { BadRequestError, NotFoundError } = require('../../shared/utils/errors');
+const { BadRequestError, NotFoundError, ConflictError } = require('../../shared/utils/errors');
+
+async function assertNotEnrolled(studentId, courseId) {
+    const enrollment = await grpcClients.hasEnrollment({ studentId, courseId });
+    if (enrollment?.enrolled) {
+        throw new ConflictError(`Course ${courseId} has already been enrolled`);
+    }
+}
+
+async function getAlreadyEnrolledCourseIds(studentId, courseIds) {
+    const checks = await Promise.all(
+        courseIds.map(async (courseId) => {
+            const enrollment = await grpcClients.hasEnrollment({ studentId, courseId });
+            return enrollment?.enrolled ? courseId : null;
+        }),
+    );
+    return checks.filter(Boolean);
+}
 
 // ========== CART ==========
 async function getCart(studentId) {
@@ -10,6 +27,10 @@ async function getCart(studentId) {
 }
 
 async function addToCart(studentId, courseId) {
+    if (!courseId) throw new BadRequestError('courseId is required');
+
+    await assertNotEnrolled(studentId, courseId);
+
     // Get canonical pricing from course-service (basePrice/salePrice)
     const courseInfo = await grpcClients.getCourseBasicInfo({ courseId });
     if (!courseInfo || !courseInfo.courseId) throw new NotFoundError('Course not found');
@@ -35,6 +56,14 @@ async function removeFromCart(studentId, courseId) {
 async function checkout(studentId, { couponCode, couponCourseId, paymentProvider}) {
     const cart = await orderRepo.getCart(studentId);
     if (!cart.items || cart.items.length === 0) throw new BadRequestError('Cart is empty');
+
+    const enrolledCourseIds = await getAlreadyEnrolledCourseIds(
+        studentId,
+        cart.items.map((item) => item.courseId),
+    );
+    if (enrolledCourseIds.length > 0) {
+        throw new ConflictError(`Already enrolled courses in cart: ${enrolledCourseIds.join(', ')}`);
+    }
 
     // Lấy giá thật từ course-service cho từng item
     const items = await Promise.all(cart.items.map(async (item) => {
