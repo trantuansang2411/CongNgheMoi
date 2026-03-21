@@ -52,6 +52,42 @@ async function getLessonProgress(studentId, courseId) {
     return LessonProgress.find({ studentId, courseId }).lean();
 }
 
+/**
+ * Chi tiet khoa hoc cho player (chi hoc vien da ghi danh).
+ * Nguon du lieu tu CourseSnapshot da dong bo qua event course.published.
+ */
+async function getPlayerCourseDetail(studentId, courseId) {
+    const enrollment = await Enrollment.findOne({ studentId, courseId }).lean();
+    if (!enrollment) throw new NotFoundError('Not enrolled in this course');
+
+    const snapshot = await CourseSnapshot.findOne({ courseId }).lean();
+    if (!snapshot) throw new NotFoundError('Course structure not found (snapshot missing)');
+
+    return {
+        course: {
+            courseId,
+            instructorId: snapshot.instructorId || '',
+            title: snapshot.title || enrollment.titleSnapshot || '',
+            basePrice: 0,
+        },
+        sections: (snapshot.sections || []).map((s) => ({
+            _id: s.sectionId,
+            courseId,
+            title: s.title,
+            orderIndex: s.orderIndex || 0,
+        })),
+        lessons: (snapshot.lessons || []).map((l) => ({
+            _id: l.lessonId,
+            title: l.title,
+            sectionId: l.sectionId,
+            orderIndex: l.orderIndex || 0,
+            durationSec: l.durationSec || 0,
+            isPreview: !!l.isPreview,
+            videoUrl: l.videoUrl || undefined,
+        })),
+    };
+}
+
 // ─── Mark Lesson Complete ────────────────────────────────────────────────────
 
 /**
@@ -318,6 +354,8 @@ async function handleCoursePublished(data) {
                 title:      l.title,
                 orderIndex: l.orderIndex || 0,
                 durationSec: l.durationSec || 0,
+                isPreview: !!l.isPreview,
+                videoUrl: l.videoUrl || '',
             })),
         },
         { upsert: true, new: true }
@@ -329,6 +367,7 @@ async function handleCoursePublished(data) {
 module.exports = {
     getMyCourses,
     getEnrollment,
+    getPlayerCourseDetail,
     getLessonProgress,
     markLessonComplete,
     recordWatchSession,

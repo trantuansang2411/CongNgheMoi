@@ -48,8 +48,8 @@ async function handleOrderPaid(data) {
     const titles = items.map(i => i.titleSnapshot).join(', ');
     await createAndPublishNotification({
         userId: studentId, type: 'ORDER_PAID',
-        title: 'Payment Successful',
-        message: `Your order has been confirmed. Courses: ${titles}`,
+        title: 'Thanh toán thành công',
+        message: `Đơn hàng của bạn đã được xác nhận. Khóa học: ${titles}`,
         data: { orderId },
     });
     logger.info(`Notification: ORDER_PAID for student=${studentId}`);
@@ -59,8 +59,8 @@ async function handleCertificateIssued(data) {
     const { studentId, courseId, certificateNo } = data;
     await createAndPublishNotification({
         userId: studentId, type: 'CERTIFICATE_ISSUED',
-        title: 'Certificate Issued',
-        message: `Congratulations! Your certificate ${certificateNo} has been issued.`,
+        title: 'Chứng chỉ đã được phát hành',
+        message: `Xin chúc mừng! Chứng chỉ ${certificateNo} của bạn đã được phát hành.`,
         data: { courseId, certificateNo },
     });
     logger.info(`Notification: CERTIFICATE_ISSUED for student=${studentId}`);
@@ -71,8 +71,8 @@ async function handleCoursePublished(data) {
     await createAndPublishNotification({
         userId: instructorId,
         type: 'COURSE_PUBLISHED',
-        title: 'Course Published',
-        message: `Your course "${title}" has been published and is now available for students.`,
+        title: 'Khóa học đã được đăng tải',
+        message: `Khóa học "${title}" đã được đăng tải và hiện có sẵn cho học viên.`,
         data: { courseId },
     });
     logger.info(`Notification: COURSE_PUBLISHED for instructor=${instructorId}`);
@@ -83,10 +83,10 @@ async function handleInstructorApproved(data) {
     await createAndPublishNotification({
         userId,
         type: 'INSTRUCTOR_APPROVED',
-        title: 'Instructor Application Approved',
+        title: 'Đơn xin giảng viên đã được duyệt',
         message: displayName
-            ? `Congratulations ${displayName}! Your instructor application has been approved.`
-            : 'Congratulations! Your instructor application has been approved.',
+            ? `Xin chúc mừng ${displayName}! Đơn xin giảng viên của bạn đã được duyệt.`
+            : 'Xin chúc mừng! Đơn xin giảng viên của bạn đã được duyệt.',
         data: {},
     });
     logger.info(`Notification: INSTRUCTOR_APPROVED for user=${userId}`);
