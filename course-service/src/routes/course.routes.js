@@ -5,11 +5,14 @@ const router = Router();
 
 // ============ COURSE (Public) ============
 router.get('/published', ctrl.getPublishedCourses);
-router.get('/:courseId', ctrl.getCourse);
+router.get('/categories', ctrl.getAllCategories);
+
 
 // ============ COURSE (Instructor) ============
 router.post('/', authenticate, authorize('INSTRUCTOR'), ctrl.createCourse);
 router.get('/instructor/mine', authenticate, authorize('INSTRUCTOR'), ctrl.getInstructorCourses);
+//get course details - public if published, otherwise only instructor can access
+router.get('/:courseId', ctrl.getCourse);
 router.put('/:courseId', authenticate, authorize('INSTRUCTOR'), ctrl.updateCourse);
 router.delete('/:courseId', authenticate, authorize('INSTRUCTOR'), ctrl.deleteCourse);
 router.post('/:courseId/submit', authenticate, authorize('INSTRUCTOR'), ctrl.submitCourse);
