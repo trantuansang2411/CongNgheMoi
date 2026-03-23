@@ -26,6 +26,8 @@ const courseSnapshotSchema = new mongoose.Schema({
         title: { type: String, default: '' },
         orderIndex: { type: Number, default: 0 },
         durationSec: { type: Number, default: 0 },
+        isPreview: { type: Boolean, default: false },
+        videoUrl: { type: String, default: '' },
     }],
 
     publishedAt: { type: Date },

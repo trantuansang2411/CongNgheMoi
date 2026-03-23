@@ -13,6 +13,9 @@ const getInstructorCourses = async (req, res, next) => {
 const getPublishedCourses = async (req, res, next) => {
     try { res.json({ success: true, data: await svc.getPublishedCourses(+req.query.page || 1, +req.query.limit || 20) }); } catch (e) { next(e); }
 };
+const getAllCategories = async (req, res, next) => {
+    try { res.json({ success: true, data: await svc.getAllCategories() }); } catch (e) { next(e); }
+};
 const updateCourse = async (req, res, next) => {
     try { res.json({ success: true, data: await svc.updateCourse(req.params.courseId, req.user.id, req.body) }); } catch (e) { next(e); }
 };
@@ -83,7 +86,7 @@ const reorderLessons = async (req, res, next) => {
 };
 
 module.exports = {
-    createCourse, getCourse, getInstructorCourses, getPublishedCourses,
+    createCourse, getCourse, getInstructorCourses, getPublishedCourses, getAllCategories,
     updateCourse, deleteCourse, submitCourse, previewCourse,
     createSection, getSections, updateSection, deleteSection, reorderSections,
     createLesson, getLessons, updateLesson, deleteLesson, reorderLessons,

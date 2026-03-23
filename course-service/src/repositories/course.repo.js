@@ -4,6 +4,7 @@ const Lesson = require('../models/mongoose/Lesson.model');
 const LessonResource = require('../models/mongoose/LessonResource.model');
 const Coupon = require('../models/mongoose/Coupon.model');
 const InstructorProfile = require('../models/mongoose/InstructorProfile.model');
+const Category = require('../models/mongoose/Category.model');
 const slugify = require('slugify');
 
 // ============ INSTRUCTOR PROFILE ============
@@ -96,6 +97,12 @@ async function updateCourseStats(courseId) {
 
 async function updateCourseRating(courseId, ratingAvg, ratingCount) {
     return Course.findOneAndUpdate({ courseId }, { ratingAvg, ratingCount }, { new: true });
+}
+
+async function findAllCategories() {
+    return Category.find({ deletedAt: null })
+        .select('categoryId name slug description iconUrl orderIndex')
+        .sort({ orderIndex: 1, name: 1 });
 }
 
 // ============ SECTION ============
@@ -221,6 +228,7 @@ module.exports = {
     // Course
     createCourse, findByCourseId, findByInstructor, findPublished, findSubmitted,
     updateCourse, softDeleteCourse, updateStatus, updateCourseStats, updateCourseRating,
+    findAllCategories,
     // Section
     createSection, findSectionsByCourse, findSectionById,
     updateSection, removeSection, reorderSections,

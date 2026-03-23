@@ -10,6 +10,11 @@ const getEnrollment = async (req, res, next) => {
     catch (e) { next(e); }
 };
 
+const getPlayerCourseDetail = async (req, res, next) => {
+    try { res.json({ success: true, data: await svc.getPlayerCourseDetail(req.user.id, req.params.courseId) }); }
+    catch (e) { next(e); }
+};
+
 const getLessonProgress = async (req, res, next) => {
     try { res.json({ success: true, data: await svc.getLessonProgress(req.user.id, req.params.courseId) }); }
     catch (e) { next(e); }
@@ -37,4 +42,4 @@ const recordWatchSession = async (req, res, next) => {
     } catch (e) { next(e); }
 };
 
-module.exports = { getMyCourses, getEnrollment, getLessonProgress, markLessonComplete, recordWatchSession };
+module.exports = { getMyCourses, getEnrollment, getPlayerCourseDetail, getLessonProgress, markLessonComplete, recordWatchSession };

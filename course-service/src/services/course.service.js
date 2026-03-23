@@ -38,6 +38,9 @@ async function getPublishedCourses(page, limit) {
 async function getSubmittedCourses(status, page, limit) {
     return repo.findSubmitted(status, page, limit);
 }
+async function getAllCategories() {
+    return repo.findAllCategories();
+}
 
 async function updateCourse(courseId, instructorId, data) {
     const course = await repo.findByCourseId(courseId);
@@ -116,6 +119,8 @@ async function publishCourse(courseId) { // gRPC
                 title: l.title,
                 orderIndex: l.orderIndex,
                 durationSec: l.durationSec || 0,
+                isPreview: !!l.isPreview,
+                videoUrl: l.videoUrl || '',
             })),
         });
     } catch (err) {
@@ -328,6 +333,7 @@ async function updateCourseRating(courseId, ratingAvg, ratingCount) {
 module.exports = {
     // Course
     createCourse, getCourse, getInstructorCourses, getPublishedCourses,
+    getAllCategories,
     getSubmittedCourses, updateCourse, deleteCourse, submitCourse, publishCourse, markCourseNeedsFixes,
     previewCourse, getCourseDetail, getCourseReviewDetail, updateCourseRating,
     // Section

@@ -8,6 +8,7 @@ const router = Router();
 router.get('/enrollments',           authenticate, ctrl.getMyCourses);
 router.get('/enrollments/:courseId', authenticate, ctrl.getEnrollment);
 router.get('/my-courses',            authenticate, ctrl.getMyCourses);
+router.get('/:courseId/player-detail', authenticate, ctrl.getPlayerCourseDetail);
 
 // ── Progress tracking ───────────────────────────────────────────────────────
 router.get( '/:courseId/progress',      authenticate, ctrl.getLessonProgress);
