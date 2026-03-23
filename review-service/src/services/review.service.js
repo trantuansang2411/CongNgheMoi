@@ -4,6 +4,49 @@ const logger = require('../../shared/utils/logger');
 const grpcClients = require('../grpc');
 const { NotFoundError, BadRequestError, ConflictError } = require('../../shared/utils/errors');
 
+function toFallbackName(studentId) {
+    if (!studentId) return 'Hoc vien';
+    return `Hoc vien ${String(studentId).slice(0, 8)}`;
+}
+
+async function getStudentProfile(studentId) {
+    try {
+        const profile = await grpcClients.userService.getUserProfile(studentId);
+        return {
+            studentName: profile?.fullName || toFallbackName(studentId),
+            studentAvatarUrl: profile?.avatarUrl || '',
+        };
+    } catch (error) {
+        logger.warn(`Cannot fetch student profile for ${studentId}: ${error.message}`);
+        return {
+            studentName: toFallbackName(studentId),
+            studentAvatarUrl: '',
+        };
+    }
+}
+
+async function enrichReview(review) {
+    const profile = await getStudentProfile(review.studentId);
+    return { ...review, ...profile };
+}
+
+async function enrichReviews(reviews) {
+    const uniqueStudentIds = [...new Set(reviews.map((item) => item.studentId).filter(Boolean))];
+
+    const profileEntries = await Promise.all(
+        uniqueStudentIds.map(async (studentId) => [studentId, await getStudentProfile(studentId)])
+    );
+    const profileMap = new Map(profileEntries);
+
+    return reviews.map((item) => ({
+        ...item,
+        ...(profileMap.get(item.studentId) || {
+            studentName: toFallbackName(item.studentId),
+            studentAvatarUrl: '',
+        }),
+    }));
+}
+
 async function createReview(studentId, { courseId, rating, comment }) {
     //validate student is enrolled in course
     const hasEnrolled = await grpcClients.learningService.hasEnrolled(studentId, courseId);
@@ -18,7 +61,7 @@ async function createReview(studentId, { courseId, rating, comment }) {
     await publishEvent('review.created', { courseId, ...stats });
     logger.info(`Review created: student=${studentId}, course=${courseId}, rating=${rating}`);
 
-    return review;
+    return enrichReview(review.toObject());
 }
 
 async function updateReview(studentId, reviewId, { rating, comment }) {
@@ -32,7 +75,7 @@ async function updateReview(studentId, reviewId, { rating, comment }) {
     const stats = await getCourseStats(review.courseId);
     await publishEvent('review.updated', { courseId: review.courseId, ...stats });
 
-    return review;
+    return enrichReview(review.toObject());
 }
 
 async function deleteReview(studentId, reviewId) {
@@ -47,7 +90,8 @@ async function getReviewsByCourse(courseId, page = 1, limit = 20) {
         Review.find({ courseId, status: 'ACTIVE' }).skip(skip).limit(limit).sort({ createdAt: -1 }).lean(),
         Review.countDocuments({ courseId, status: 'ACTIVE' }),
     ]);
-    return { items, total, page, limit };
+    const enrichedItems = await enrichReviews(items);
+    return { items: enrichedItems, total, page, limit };
 }
 
 async function getCourseStats(courseId) {

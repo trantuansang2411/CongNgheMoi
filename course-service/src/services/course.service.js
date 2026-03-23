@@ -109,13 +109,13 @@ async function publishCourse(courseId) { // gRPC
 
             // --- Extended payload for learning-service snapshot (backward-compatible) ---
             sections: sections.map(s => ({
-                sectionId: s._id.toString(),
+                sectionId: s.sectionId || s._id.toString(),
                 title: s.title,
                 orderIndex: s.orderIndex,
             })),
             lessons: lessons.map(l => ({
-                lessonId: l._id.toString(),
-                sectionId: l.sectionId ? l.sectionId.toString() : '',
+                lessonId: l.lessonId || l._id.toString(),
+                sectionId: l.sectionId || '',
                 title: l.title,
                 orderIndex: l.orderIndex,
                 durationSec: l.durationSec || 0,
