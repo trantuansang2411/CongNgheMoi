@@ -80,6 +80,7 @@ function mapApplicationData(data = {}) {
         teachingTopics: Array.isArray(data.teachingTopics) ? data.teachingTopics : [],
         portfolioUrl: data.portfolioUrl || '',
         certificateUrls: Array.isArray(data.certificateUrls) ? data.certificateUrls : [],
+        email: data.email || '',
     };
 }
 

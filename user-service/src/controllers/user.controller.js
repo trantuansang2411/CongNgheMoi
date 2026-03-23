@@ -16,7 +16,8 @@ async function updateProfile(req, res, next) {
 
 async function applyInstructor(req, res, next) {
     try {
-        const application = await userService.applyInstructor(req.user.id, req.body);
+        const dataWithEmail = { ...req.body, email: req.user.email || '' };
+        const application = await userService.applyInstructor(req.user.id, dataWithEmail);
         res.status(201).json({ success: true, data: application });
     } catch (err) { next(err); }
 }

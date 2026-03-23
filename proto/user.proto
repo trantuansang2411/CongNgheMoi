@@ -73,6 +73,7 @@ message ApplicationData {
   repeated string teaching_topics = 7;
   string portfolio_url = 8;
   repeated string certificate_urls = 9;
+  string email = 10;
 }
 
 message ApplicationDetail {

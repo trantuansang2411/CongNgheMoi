@@ -2,6 +2,7 @@ const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 const authService = require('../services/auth.service');
+const authRepo = require('../repositories/auth.repo');
 const logger = require('../../shared/utils/logger');
 
 const PROTO_PATH = path.join(__dirname, '../../proto/auth.proto');
@@ -27,10 +28,22 @@ async function addRoleToAccount(call, callback) {
     }
 }
 
+async function getAccountEmail(call, callback) {
+    try {
+        const { accountId } = call.request;
+        const account = await authRepo.findAccountById(accountId);
+        callback(null, { email: account?.email || '' });
+    } catch (err) {
+        logger.error('gRPC GetAccountEmail error:', err.message);
+        callback({ code: grpc.status.INTERNAL, message: err.message });
+    }
+}
+
 function startGrpcServer(port) {
     const server = new grpc.Server();
     server.addService(authProto.AuthService.service, {
         addRoleToAccount,
+        getAccountEmail,
     });
 
     server.bindAsync(`0.0.0.0:${port}`, grpc.ServerCredentials.createInsecure(), (err, boundPort) => {
