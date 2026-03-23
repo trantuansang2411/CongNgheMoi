@@ -10,7 +10,10 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
-app.use(morgan('dev'));
+//skip get /health from logging
+app.use(morgan('dev', {
+    skip: (req, res) => req.method === 'GET' && req.path === '/health'
+}));
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', service: 'user-service' });
