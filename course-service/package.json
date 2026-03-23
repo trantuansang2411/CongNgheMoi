@@ -6,6 +6,7 @@
     "scripts": {
         "start": "node src/server.js",
         "dev": "nodemon src/server.js",
+        "seed:generate-seed-courses": "node scripts/generate-seed-courses.js",
         "seed:courses": "node scripts/seed.js",
         "seed:courses:file": "node scripts/seed.js ./seed-courses.json",
         "seed:courses:course-only": "set SEED_SYNC_LEARNING=false&& node scripts/seed.js ./seed-courses.json"
