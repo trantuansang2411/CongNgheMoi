@@ -53,15 +53,16 @@ async function findPublished(page = 1, limit = 20) {
     return { items, total, page, limit };
 }
 
-async function findSubmitted(page = 1, limit = 20) {
+async function findSubmitted(status = '', page = 1, limit = 20) {
     const skip = (page - 1) * limit;
+    const statusFilter = status && ['SUBMITTED', 'NEEDS_FIXES', 'PUBLISHED'].includes(status) ? status : 'SUBMITTED';
     const [items, total] = await Promise.all([
-        Course.find({ status: 'SUBMITTED', deletedAt: null })
+        Course.find({ status: statusFilter, deletedAt: null })
             .select('courseId title instructorId instructorName thumbnailUrl basePrice salePrice currency totalSections totalLessons totalDurationSec submittedAt')
             .sort({ submittedAt: -1, createdAt: -1 })
             .skip(skip)
             .limit(limit),
-        Course.countDocuments({ status: 'SUBMITTED', deletedAt: null }),
+        Course.countDocuments({ status: statusFilter, deletedAt: null }),
     ]);
     return { items, total, page, limit };
 }

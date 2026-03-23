@@ -55,13 +55,12 @@ message ListApplicationsRequest {
 }
 
 message ApplicationItem {
-  string id = 1;
-  string user_id = 2;
-  string status = 3;
-  string full_name = 4;
-  string headline = 5;
-  string created_at = 6;
-  string avatar_url = 7;
+  string user_id = 1;
+  string status = 2;
+  string full_name = 3;
+  string headline = 4;
+  string created_at = 5;
+  string avatar_url = 6;
 }
 
 message ApplicationData {
@@ -74,7 +73,6 @@ message ApplicationData {
   repeated string teaching_topics = 7;
   string portfolio_url = 8;
   repeated string certificate_urls = 9;
-  string id_card_url = 10;
 }
 
 message ApplicationDetail {

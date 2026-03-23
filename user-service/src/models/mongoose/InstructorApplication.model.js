@@ -12,7 +12,6 @@ const instructorApplicationSchema = new mongoose.Schema({
         teachingTopics: { type: [String], default: [] }, // muốn dạy môn/chủ đề gì
         portfolioUrl: { type: String, trim: true, required: true }, // link portfolio/linkedin/github/website
         certificateUrls: { type: [String], default: [] }, // ảnh hoặc file chứng chỉ nếu có
-        idCardUrl: { type: String, trim: true, required: true }, // ảnh thẻ CCCD/CMND
     },
     status: {
         type: String,

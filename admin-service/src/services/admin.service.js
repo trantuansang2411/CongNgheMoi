@@ -13,8 +13,8 @@ async function markCourseNeedsFixes(courseId) {
     return result;
 }
 
-async function listSubmittedCourses(page, limit) {
-    return grpcClients.listSubmittedCourses({ page: page || 1, limit: limit || 20 });
+async function listSubmittedCourses(status, page, limit) {
+    return grpcClients.listSubmittedCourses({ status: status || '', page: page || 1, limit: limit || 20 });
 }
 
 async function getCourseReviewDetail(courseId) {
@@ -23,7 +23,12 @@ async function getCourseReviewDetail(courseId) {
 
 async function listApplications(status, page, limit) {
     const result = await grpcClients.listApplications({ status: status || '', page: page || 1, limit: limit || 20 });
-    return result;
+    return {
+        items: result.applications || [],
+        total: result.total || 0,
+        page: result.page || (page || 1),
+        limit: result.limit || (limit || 20),
+    };
 }
 
 async function getApplicationDetail(applicationId) {
@@ -35,7 +40,7 @@ async function approveInstructor(userId, reviewerId) {
     const result = await grpcClients.reviewApplication({
         applicationId: userId, // dùng userId để tìm application
         status: 'APPROVED',
-        reviewerId,
+        reviewerId: reviewerId, // có thể lấy từ req.user.id nếu cần
     });
 
     // 2. Thêm role INSTRUCTOR qua Auth Service gRPC
@@ -52,7 +57,7 @@ async function rejectInstructor(userId, reviewerId) {
     await grpcClients.reviewApplication({
         applicationId: userId,
         status: 'REJECTED',
-        reviewerId,
+        reviewerId: reviewerId,
     });
     logger.info(`Admin: rejected instructor application ${userId}`);
     return { message: `Instructor application ${userId} rejected` };

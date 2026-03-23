@@ -32,8 +32,8 @@ async function findApplicationById(userId) {
     return InstructorApplication.findOne({ userId });
 }
 
-async function updateApplicationStatus(id, status, reviewerId) {
-    return InstructorApplication.findByIdAndUpdate(id, {
+async function updateApplicationStatus(userId, status, reviewerId) {
+    return InstructorApplication.findOneAndUpdate({ userId }, {
         status,
         reviewerId,
         reviewedAt: new Date(),
