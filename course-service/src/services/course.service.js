@@ -35,12 +35,11 @@ async function getPublishedCourses(page, limit) {
     return repo.findPublished(page, limit);
 }
 
+async function getSubmittedCourses(status, page, limit) {
+    return repo.findSubmitted(status, page, limit);
+}
 async function getAllCategories() {
     return repo.findAllCategories();
-}
-
-async function getSubmittedCourses(page, limit) {
-    return repo.findSubmitted(page, limit);
 }
 
 async function updateCourse(courseId, instructorId, data) {

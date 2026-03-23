@@ -55,11 +55,8 @@ async function reviewApplication(call, callback) {
     try {
         const { applicationId, status, reviewerId } = call.request;
 
-        // Admin truyền userId, cần tìm application PENDING của user đó
-        const application = await userService.getApplication(applicationId);
-        const realId = application._id.toString();
-
-        const result = await userService.reviewApplication(realId, status, reviewerId);
+        // Admin truyền userId, cần tìm application PENDING của user đó rồi update status thành APPROVED hoặc REJECTED
+        const result = await userService.reviewApplication(applicationId, status, reviewerId);
         callback(null, {
             success: true,
             message: `Application ${status.toLowerCase()}`,
@@ -83,7 +80,6 @@ function mapApplicationData(data = {}) {
         teachingTopics: Array.isArray(data.teachingTopics) ? data.teachingTopics : [],
         portfolioUrl: data.portfolioUrl || '',
         certificateUrls: Array.isArray(data.certificateUrls) ? data.certificateUrls : [],
-        idCardUrl: data.idCardUrl || '',
     };
 }
 
@@ -115,11 +111,10 @@ async function listApplications(call, callback) {
         const result = await userService.listApplications(filter, page || 1, limit || 20);
         callback(null, {
             applications: result.items.map(app => ({
-                id: app._id?.toString() || app.id,
                 userId: app.userId,
                 status: app.status,
-                fullName: app.data?.fullName || '',
-                headline: app.data?.headline || '',
+                fullName: app.data.fullName || '',
+                headline: app.data.headline || '',
                 createdAt: app.createdAt?.toISOString() || '',
                 avatarUrl: app.avatarUrl || '',
             })),

@@ -40,9 +40,10 @@ async function getCourseBasicInfo(call, callback) {
 
 async function listSubmittedCourses(call, callback) {
     try {
+        const status = call.request.status || '';
         const page = call.request.page || 1;
         const limit = call.request.limit || 20;
-        const result = await courseService.getSubmittedCourses(page, limit);
+        const result = await courseService.getSubmittedCourses(status, page, limit);
         callback(null, {
             items: result.items.map((course) => ({
                 courseId: course.courseId,
