@@ -35,5 +35,6 @@ module.exports = {
     listApplications: promisify(userClient, 'listApplications'),
     getApplication: promisify(userClient, 'getApplication'),
     addRoleToAccount: promisify(authClient, 'addRoleToAccount'),
+    getAccountEmail: promisify(authClient, 'getAccountEmail'),
 };
 

@@ -114,7 +114,28 @@ async function getInstructorProfile(userId) {
     if (!profile) {
         throw new NotFoundError('Instructor profile not found');
     }
-    return profile;
+
+    // Lấy đơn đã duyệt để kèm thông tin ứng tuyển
+    const application = await userRepo.findApplicationByUserId(userId);
+    const profileObj = profile.toObject ? profile.toObject() : { ...profile };
+
+    if (application && application.status === 'APPROVED' && application.data) {
+        const appData = application.data;
+        profileObj.applicationData = {
+            fullName: appData.fullName || '',
+            birthDate: appData.birthDate || null,
+            headline: appData.headline || '',
+            experience: appData.experience || '',
+            expertise: appData.expertise || '',
+            educationLevel: appData.educationLevel || '',
+            teachingTopics: appData.teachingTopics || [],
+            portfolioUrl: appData.portfolioUrl || '',
+            certificateUrls: appData.certificateUrls || [],
+            email: appData.email || '',
+        };
+    }
+
+    return profileObj;
 }
 
 async function updateInstructorProfile(userId, data) {

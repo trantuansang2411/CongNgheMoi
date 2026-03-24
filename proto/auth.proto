@@ -4,6 +4,7 @@ package auth;
 
 service AuthService {
   rpc AddRoleToAccount (AddRoleToAccountRequest) returns (AddRoleToAccountResponse);
+  rpc GetAccountEmail (GetAccountEmailRequest) returns (GetAccountEmailResponse);
 }
 
 message AddRoleToAccountRequest {
@@ -14,4 +15,12 @@ message AddRoleToAccountRequest {
 message AddRoleToAccountResponse {
   bool success = 1;
   string message = 2;
+}
+
+message GetAccountEmailRequest {
+  string account_id = 1;
+}
+
+message GetAccountEmailResponse {
+  string email = 1;
 }

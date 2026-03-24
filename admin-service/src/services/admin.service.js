@@ -32,7 +32,21 @@ async function listApplications(status, page, limit) {
 }
 
 async function getApplicationDetail(applicationId) {
-    return grpcClients.getApplication({ applicationId });
+    const application = await grpcClients.getApplication({ applicationId });
+
+    // Đơn cũ chưa có email → lấy từ auth-service
+    if (!application.data?.email) {
+        try {
+            const { email } = await grpcClients.getAccountEmail({ accountId: application.userId });
+            if (email) {
+                application.data = { ...application.data, email };
+            }
+        } catch {
+            // Bỏ qua nếu không lấy được
+        }
+    }
+
+    return application;
 }
 
 async function approveInstructor(userId, reviewerId) {

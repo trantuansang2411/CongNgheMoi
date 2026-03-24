@@ -10,7 +10,7 @@ const logger = require('../shared/utils/logger');
 const app = express();
 
 // Security
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(cors());
 app.use(morgan('dev', { skip: (req) => req.path === '/health' }));
 
@@ -45,6 +45,7 @@ const services = {
     '/api/v1/reviews': { target: `http://${process.env.REVIEW_SERVICE_HOST || 'localhost'}:${process.env.REVIEW_SERVICE_PORT || 3010}` },
     '/api/v1/notifications': { target: `http://${process.env.NOTIFICATION_SERVICE_HOST || 'localhost'}:${process.env.NOTIFICATION_SERVICE_PORT || 3011}` },
     '/api/v1/admin': { target: `http://${process.env.ADMIN_SERVICE_HOST || 'localhost'}:${process.env.ADMIN_SERVICE_PORT || 3012}` },
+    '/uploads': { target: `http://${process.env.USER_SERVICE_HOST || 'localhost'}:${process.env.USER_SERVICE_PORT || 3002}` },
 };
 
 // Create proxy routes — prepend the mount path back since Express strips it
