@@ -1,4 +1,6 @@
 const userService = require('../services/user.service');
+const path = require('path');
+const fs = require('fs');
 
 async function getProfile(req, res, next) {
     try {
@@ -48,5 +50,43 @@ async function getMyInstructorProfile(req, res, next) {
     } catch (err) { next(err); }
 }
 
+async function uploadUserAvatar(req, res, next) {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: { message: 'Vui lòng chọn file ảnh.' } });
+        }
 
-module.exports = { getProfile, updateProfile, applyInstructor, getApplication, getInstructorProfile, updateInstructorProfile, getMyInstructorProfile };
+        // Xoá ảnh cũ nếu là file local
+        const oldProfile = await userService.getProfile(req.user.id).catch(() => null);
+        if (oldProfile?.avatarUrl?.includes('/uploads/')) {
+            const oldPath = path.join(__dirname, '../../uploads', oldProfile.avatarUrl.split('/uploads/')[1]);
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        }
+
+        const avatarUrl = `/uploads/avatars/users/${req.file.filename}`;
+        const profile = await userService.updateProfile(req.user.id, { avatarUrl });
+        res.json({ success: true, data: profile });
+    } catch (err) { next(err); }
+}
+
+async function uploadInstructorAvatar(req, res, next) {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: { message: 'Vui lòng chọn file ảnh.' } });
+        }
+
+        // Xoá ảnh cũ nếu là file local
+        const oldProfile = await userService.getInstructorProfile(req.user.id).catch(() => null);
+        if (oldProfile?.avatarUrl?.includes('/uploads/')) {
+            const oldPath = path.join(__dirname, '../../uploads', oldProfile.avatarUrl.split('/uploads/')[1]);
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        }
+
+        const avatarUrl = `/uploads/avatars/instructors/${req.file.filename}`;
+        const profile = await userService.updateInstructorProfile(req.user.id, { avatarUrl });
+        res.json({ success: true, data: profile });
+    } catch (err) { next(err); }
+}
+
+
+module.exports = { getProfile, updateProfile, applyInstructor, getApplication, getInstructorProfile, updateInstructorProfile, getMyInstructorProfile, uploadUserAvatar, uploadInstructorAvatar };

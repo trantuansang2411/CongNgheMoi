@@ -1,8 +1,25 @@
 const logger = require('../utils/logger');
+const multer = require('multer');
 
 function errorHandler(err, req, res, _next) { // Đây là middleware xử lý lỗi tập trung.
     // Đặt tên là _next để báo hiệu rằng tham số này không được sử dụng 
     // để tránh warning như: 'next' is defined but never used
+
+    // Xử lý lỗi Multer (upload file)
+    if (err instanceof multer.MulterError) {
+        const messages = {
+            LIMIT_FILE_SIZE: 'File quá lớn. Vui lòng chọn file nhỏ hơn 10MB.',
+            LIMIT_UNEXPECTED_FILE: 'Field upload không hợp lệ.',
+        };
+        return res.status(400).json({
+            success: false,
+            error: {
+                code: 'UPLOAD_ERROR',
+                message: messages[err.code] || `Lỗi upload: ${err.message}`,
+            },
+        });
+    }
+
     // Log the error
     if (err.isOperational) { // nếu là lỗi do mình dự đoán trước thì log warning do user gây ra
         logger.warn(`${err.statusCode} - ${err.message}`, { // tự thêm level: warm vì bạn gọi logger.warn()
