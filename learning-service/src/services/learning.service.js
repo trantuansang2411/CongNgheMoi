@@ -1,6 +1,6 @@
 'use strict';
 
-const Enrollment    = require('../models/mongoose/Enrollment.model');
+const Enrollment = require('../models/mongoose/Enrollment.model');
 const LessonProgress = require('../models/mongoose/LessonProgress.model');
 const CourseSnapshot = require('../models/mongoose/CourseSnapshot.model');
 const { publishEvent } = require('../../shared/events/rabbitmq');
@@ -8,10 +8,10 @@ const logger = require('../../shared/utils/logger');
 const { NotFoundError, BadRequestError } = require('../../shared/utils/errors');
 
 // ─── Constants ──────────────────────────────────────────────────────────────
-const MAX_HEARTBEAT_SEC          = 35;   // max delta per heartbeat call (client sends ~30s)
+const MAX_HEARTBEAT_SEC = 35;   // max delta per heartbeat call (client sends ~30s)
 const MIN_HEARTBEAT_INTERVAL_SEC = 20;   // minimum seconds between heartbeats (production anti-spam)
-const LESSON_COMPLETE_PCT        = 90;   // % of lessons completed required
-const WATCH_TIME_PCT             = 0.70; // 70% of total course duration required
+const LESSON_COMPLETE_PCT = 90;   // % of lessons completed required
+const WATCH_TIME_PCT = 0.70; // 70% of total course duration required
 const IS_DEV = (process.env.NODE_ENV || 'dev') === 'dev'; // skip cooldown in dev for Postman testing
 
 function _getValidLessonIds(snapshot) {
@@ -245,7 +245,7 @@ async function _checkCourseCompletion(studentId, courseId, enrollment, snapshot)
     const enroll = enrollment || await Enrollment.findOne({ studentId, courseId });
     if (!enroll || enroll.status === 'COMPLETED') return;
 
-    const totalLessons     = snapshot.totalLessons || 0;
+    const totalLessons = snapshot.totalLessons || 0;
     const totalDurationSec = snapshot.totalDurationSec || 0;
     const validLessonIds = _getValidLessonIds(snapshot);
 
@@ -292,7 +292,7 @@ async function _checkCourseCompletion(studentId, courseId, enrollment, snapshot)
         studentId,
         courseId,
         enrollmentId: updated._id.toString(),
-        completedAt:  updated.completedAt,
+        completedAt: updated.completedAt,
     });
 
     logger.info(
@@ -340,18 +340,18 @@ async function handleCoursePublished(data) {
         { courseId },
         {
             courseId, title, slug, instructorId,
-            totalLessons:     totalLessons || 0,
+            totalLessons: totalLessons || 0,
             totalDurationSec: totalDurationSec || 0,
-            publishedAt:      publishedAt ? new Date(publishedAt) : new Date(),
+            publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
             sections: sections.map(s => ({
-                sectionId:  s.sectionId,
-                title:      s.title,
+                sectionId: s.sectionId,
+                title: s.title,
                 orderIndex: s.orderIndex || 0,
             })),
             lessons: lessons.map(l => ({
-                lessonId:   l.lessonId,
-                sectionId:  l.sectionId || '',
-                title:      l.title,
+                lessonId: l.lessonId,
+                sectionId: l.sectionId || '',
+                title: l.title,
                 orderIndex: l.orderIndex || 0,
                 durationSec: l.durationSec || 0,
                 isPreview: !!l.isPreview,

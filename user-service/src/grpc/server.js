@@ -93,6 +93,7 @@ async function getApplication(call, callback) {
             userId: application.userId,
             data: mapApplicationData(application.data),
             status: application.status,
+            avatarUrl: application.avatarUrl || '',
             reviewerId: application.reviewerId || '',
             reviewedAt: application.reviewedAt ? application.reviewedAt.toISOString() : '',
             createdAt: application.createdAt ? application.createdAt.toISOString() : '',

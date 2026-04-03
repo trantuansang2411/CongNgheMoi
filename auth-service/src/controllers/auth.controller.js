@@ -1,5 +1,15 @@
 const authService = require('../services/auth.service');
 
+function setRefreshCookie(res, token) {
+    res.cookie('refreshToken', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: '/',
+    });
+}
+
 async function register(req, res, next) {
     try {
         const result = await authService.register(req.body);
@@ -12,7 +22,8 @@ async function register(req, res, next) {
 async function verifyRegistrationOtp(req, res, next) {
     try {
         const result = await authService.verifyRegistrationOtp(req.body);
-        res.json({ success: true, data: result });
+        setRefreshCookie(res, result.refreshToken);
+        res.json({ success: true, data: { user: result.user, accessToken: result.accessToken } });
     } catch (err) {
         next(err);
     }
@@ -30,7 +41,8 @@ async function resendRegistrationOtp(req, res, next) {
 async function login(req, res, next) {
     try {
         const result = await authService.login(req.body);
-        res.json({ success: true, data: result }); // Nếu không gọi res.status() thì Express mặc định: 200 OK
+        setRefreshCookie(res, result.refreshToken);
+        res.json({ success: true, data: { user: result.user, accessToken: result.accessToken } });
     } catch (err) {
         next(err);
     }
@@ -39,7 +51,8 @@ async function login(req, res, next) {
 async function googleLogin(req, res, next) {
     try {
         const result = await authService.googleLogin(req.body);
-        res.json({ success: true, data: result });
+        setRefreshCookie(res, result.refreshToken);
+        res.json({ success: true, data: { user: result.user, accessToken: result.accessToken } });
     } catch (err) {
         next(err);
     }
@@ -47,9 +60,10 @@ async function googleLogin(req, res, next) {
 
 async function refreshToken(req, res, next) {
     try {
-        const { refreshToken } = req.body;
-        const result = await authService.refreshAccessToken(refreshToken);
-        res.json({ success: true, data: result });
+        const token = req.cookies?.refreshToken || req.body?.refreshToken;
+        const result = await authService.refreshAccessToken(token);
+        setRefreshCookie(res, result.refreshToken);
+        res.json({ success: true, data: { accessToken: result.accessToken } });
     } catch (err) {
         next(err);
     }
@@ -57,8 +71,9 @@ async function refreshToken(req, res, next) {
 
 async function logout(req, res, next) {
     try {
-        const { refreshToken } = req.body;
-        await authService.logout(refreshToken);
+        const token = req.cookies?.refreshToken || req.body?.refreshToken;
+        await authService.logout(token);
+        res.clearCookie('refreshToken', { path: '/' });
         res.json({ success: true, message: 'Logged out successfully' });
     } catch (err) {
         next(err);
