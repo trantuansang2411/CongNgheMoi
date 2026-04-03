@@ -59,7 +59,18 @@ async function getApplicationById(applicationId) {
     if (!application) {
         throw new NotFoundError('Application not found');
     }
-    return application;
+    const plainApp = application.toObject ? application.toObject() : { ...application };
+
+    // Lấy avatar từ InstructorProfile trước, fallback về UserProfile
+    const instructorProfile = await userRepo.findInstructorProfile(plainApp.userId);
+    if (instructorProfile && instructorProfile.avatarUrl) {
+        plainApp.avatarUrl = instructorProfile.avatarUrl;
+    } else {
+        const userProfile = await userRepo.findProfileByUserId(plainApp.userId);
+        plainApp.avatarUrl = userProfile?.avatarUrl || '';
+    }
+
+    return plainApp;
 }
 
 async function reviewApplication(applicationId, status, reviewerId) {
@@ -94,17 +105,23 @@ async function listApplications(filter, page, limit) {
     const result = await userRepo.listApplications(filter, page, limit);
 
     const userIds = [...new Set(result.items.map((item) => item.userId).filter(Boolean))];
-    const profiles = userIds.length > 0 ? await userRepo.findProfilesByUserIds(userIds) : [];
-    const avatarMap = new Map(profiles.map((profile) => [profile.userId, profile.avatarUrl || '']));
+    const [userProfiles, instructorProfiles] = userIds.length > 0
+        ? await Promise.all([
+            userRepo.findProfilesByUserIds(userIds),
+            userRepo.findInstructorProfilesByUserIds(userIds),
+        ])
+        : [[], []];
+
+    const userAvatarMap = new Map(userProfiles.map((p) => [p.userId, p.avatarUrl || '']));
+    const instructorAvatarMap = new Map(instructorProfiles.map((p) => [p.userId, p.avatarUrl || '']));
 
     return {
         ...result,
         items: result.items.map((item) => {
             const plainItem = typeof item.toObject === 'function' ? item.toObject() : item;
-            return {
-                ...plainItem,
-                avatarUrl: avatarMap.get(item.userId) || '',
-            };
+            // Ưu tiên avatar instructor profile, fallback về user profile
+            const avatarUrl = instructorAvatarMap.get(item.userId) || userAvatarMap.get(item.userId) || '';
+            return { ...plainItem, avatarUrl };
         }),
     };
 }

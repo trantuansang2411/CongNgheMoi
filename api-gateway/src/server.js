@@ -11,7 +11,10 @@ const app = express();
 
 // Security
 app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+}));
 app.use(morgan('dev', { skip: (req) => req.path === '/health' }));
 
 // Rate limiting
@@ -56,6 +59,13 @@ Object.entries(services).forEach(([routePath, config]) => {
         timeout: 30000,
         proxyTimeout: 30000,
         pathRewrite: (path) => routePath + path,
+        onProxyRes: (proxyRes) => {
+            // Xóa CORS header từ service con để gateway tự quản lý
+            delete proxyRes.headers['access-control-allow-origin'];
+            delete proxyRes.headers['access-control-allow-credentials'];
+            delete proxyRes.headers['access-control-allow-methods'];
+            delete proxyRes.headers['access-control-allow-headers'];
+        },
         onError: (err, req, res) => {
             logger.error(`Proxy error for ${routePath}:`, err.message);
             res.status(502).json({ success: false, error: { code: 'BAD_GATEWAY', message: 'Service unavailable' } });
