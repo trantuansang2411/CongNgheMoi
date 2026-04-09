@@ -68,6 +68,7 @@ async function submitCourse(courseId, instructorId) {
     return repo.updateStatus(courseId, 'SUBMITTED', { submittedAt: new Date() });
 }
 
+
 async function publishCourse(courseId) { // gRPC
     const course = await repo.findByCourseId(courseId);
     if (!course) throw new NotFoundError('Course not found');
@@ -171,8 +172,9 @@ async function getCourseDetail(courseId) {
 async function getCourseReviewDetail(courseId) {
     const course = await repo.findByCourseId(courseId);
     if (!course) throw new NotFoundError('Course not found');
-    if (course.status !== 'SUBMITTED') throw new BadRequestError('Course is not submitted for review');
-
+    if (!['SUBMITTED', 'PUBLISHED', 'NEEDS_FIXES'].includes(course.status)) {
+        throw new BadRequestError('Course is not available for review');
+    }
     const sections = await repo.findSectionsByCourse(courseId);
     const lessons = await repo.findLessonsByCourse(courseId);
 
@@ -273,7 +275,13 @@ async function addResource(lessonId, instructorId, data) {
     const course = await repo.findByCourseId(lesson.courseId);
     if (!course) throw new NotFoundError('Course not found');
     if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
-    return repo.createResource({ ...data, lessonId });
+    // Frontend sends 'title' but model uses 'name' — map it
+    const payload = { ...data, lessonId };
+    if (payload.title && !payload.name) {
+        payload.name = payload.title;
+        delete payload.title;
+    }
+    return repo.createResource(payload);
 }
 
 async function getResources(lessonId) {

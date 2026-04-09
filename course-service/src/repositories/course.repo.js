@@ -56,7 +56,8 @@ async function findPublished(page = 1, limit = 20) {
 
 async function findSubmitted(status = '', page = 1, limit = 20) {
     const skip = (page - 1) * limit;
-    const statusFilter = status && ['SUBMITTED', 'NEEDS_FIXES', 'PUBLISHED'].includes(status) ? status : 'SUBMITTED';
+    const validStatuses = ['SUBMITTED', 'NEEDS_FIXES', 'PUBLISHED'];
+    const statusFilter = status && validStatuses.includes(status) ? status : { $in: validStatuses };
     const [items, total] = await Promise.all([
         Course.find({ status: statusFilter, deletedAt: null })
             .select('courseId title instructorId instructorName thumbnailUrl basePrice salePrice currency totalSections totalLessons totalDurationSec submittedAt')
