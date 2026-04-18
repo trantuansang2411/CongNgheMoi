@@ -2,6 +2,25 @@ const repo = require('../repositories/course.repo');
 const { publishEvent } = require('../../shared/events/rabbitmq');
 const logger = require('../../shared/utils/logger');
 const { NotFoundError, ForbiddenError, BadRequestError } = require('../../shared/utils/errors');
+const { UPLOAD_DIR } = require('../middleware/upload');
+const fs = require('fs');
+const path = require('path');
+
+// Xóa file vật lý nếu là file local (không phải URL ngoài)
+function deleteLocalFile(fileUrl) {
+    if (!fileUrl || fileUrl.startsWith('http')) return;
+    try {
+        // fileUrl dạng /course-uploads/videos/xxx.mp4
+        const relative = fileUrl.replace(/^\/course-uploads\//, '');
+        const fullPath = path.join(UPLOAD_DIR, relative);
+        if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
+            logger.info(`Deleted file: ${fullPath}`);
+        }
+    } catch (err) {
+        logger.warn(`Failed to delete file ${fileUrl}: ${err.message}`);
+    }
+}
 
 // ============ COURSE ============
 async function handleInstructorData(userId, displayName) {
@@ -48,6 +67,10 @@ async function updateCourse(courseId, instructorId, data) {
     if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
     if (course.status === 'PUBLISHED') throw new BadRequestError('Published course cannot be edited');
     if (course.status === 'SUBMITTED') throw new BadRequestError('Submitted course cannot be edited');
+    // Xóa thumbnail cũ nếu được thay bằng file mới
+    if (data.thumbnailUrl && data.thumbnailUrl !== course.thumbnailUrl) {
+        deleteLocalFile(course.thumbnailUrl);
+    }
     return repo.updateCourse(courseId, data);
 }
 
@@ -57,6 +80,17 @@ async function deleteCourse(courseId, instructorId) {
     if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
     if (course.status === 'PUBLISHED') throw new BadRequestError('Published course cannot be deleted');
     if (course.status === 'SUBMITTED') throw new BadRequestError('Submitted course cannot be deleted');
+    // Xóa thumbnail
+    deleteLocalFile(course.thumbnailUrl);
+    // Xóa tất cả file video và resource của các lesson trong course
+    const lessons = await repo.findLessonsByCourse(courseId);
+    for (const lesson of lessons) {
+        deleteLocalFile(lesson.videoUrl);
+        const resources = await repo.findResourcesByLesson(lesson.lessonId || lesson._id.toString());
+        for (const res of resources) {
+            if (res.type === 'FILE') deleteLocalFile(res.url);
+        }
+    }
     return repo.softDeleteCourse(courseId);
 }
 
@@ -177,8 +211,9 @@ async function getCourseReviewDetail(courseId) {
     }
     const sections = await repo.findSectionsByCourse(courseId);
     const lessons = await repo.findLessonsByCourse(courseId);
+    const resources = await repo.findResourcesByCourse(courseId);
 
-    return { course, sections, lessons };
+    return { course, sections, lessons, resources };
 }
 
 // ============ SECTION ============
@@ -210,6 +245,15 @@ async function deleteSection(sectionId, instructorId) {
     const course = await repo.findByCourseId(section.courseId);
     if (!course) throw new NotFoundError('Course not found');
     if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
+    // Xóa file của các lesson trong section
+    const lessons = await repo.findLessonsBySection(sectionId);
+    for (const lesson of lessons) {
+        deleteLocalFile(lesson.videoUrl);
+        const resources = await repo.findResourcesByLesson(lesson.lessonId || lesson._id.toString());
+        for (const res of resources) {
+            if (res.type === 'FILE') deleteLocalFile(res.url);
+        }
+    }
     await repo.removeSection(sectionId);
     await repo.updateCourseStats(section.courseId);
     return { message: 'Section deleted' };
@@ -243,6 +287,10 @@ async function updateLesson(lessonId, instructorId, data) {
     const course = await repo.findByCourseId(lesson.courseId);
     if (!course) throw new NotFoundError('Course not found');
     if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
+    // Xóa video cũ nếu được thay bằng file mới
+    if (data.videoUrl !== undefined && data.videoUrl !== lesson.videoUrl) {
+        deleteLocalFile(lesson.videoUrl);
+    }
     const updated = await repo.updateLesson(lessonId, data);
     await repo.updateCourseStats(lesson.courseId);
     return updated;
@@ -254,6 +302,12 @@ async function deleteLesson(lessonId, instructorId) {
     const course = await repo.findByCourseId(lesson.courseId);
     if (!course) throw new NotFoundError('Course not found');
     if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
+    // Xóa video và tất cả resource file của lesson
+    deleteLocalFile(lesson.videoUrl);
+    const resources = await repo.findResourcesByLesson(lessonId);
+    for (const res of resources) {
+        if (res.type === 'FILE') deleteLocalFile(res.url);
+    }
     await repo.removeLesson(lessonId);
     await repo.updateCourseStats(lesson.courseId);
     return { message: 'Lesson deleted' };
@@ -275,8 +329,9 @@ async function addResource(lessonId, instructorId, data) {
     const course = await repo.findByCourseId(lesson.courseId);
     if (!course) throw new NotFoundError('Course not found');
     if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
+    // Always store UUID as lessonId (not MongoDB _id) for consistent querying
+    const payload = { ...data, lessonId: lesson.lessonId };
     // Frontend sends 'title' but model uses 'name' — map it
-    const payload = { ...data, lessonId };
     if (payload.title && !payload.name) {
         payload.name = payload.title;
         delete payload.title;
@@ -295,6 +350,8 @@ async function deleteResource(resourceId, instructorId) {
     const course = await repo.findByCourseId(lesson.courseId);
     if (!course) throw new NotFoundError('Course not found');
     if (course.instructorId !== instructorId) throw new ForbiddenError('Not your course');
+    // Xóa file vật lý nếu là FILE type
+    if (resource.type === 'FILE') deleteLocalFile(resource.url);
     return repo.softDeleteResource(resourceId);
 }
 

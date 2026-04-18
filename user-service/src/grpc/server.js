@@ -79,8 +79,8 @@ function mapApplicationData(data = {}) {
         educationLevel: data.educationLevel || '',
         teachingTopics: Array.isArray(data.teachingTopics) ? data.teachingTopics : [],
         portfolioUrl: data.portfolioUrl || '',
-        certificateUrls: Array.isArray(data.certificateUrls) ? data.certificateUrls : [],
         email: data.email || '',
+        profileImageUrl: data.profileImageUrl || '',
     };
 }
 

@@ -60,7 +60,7 @@ async function findSubmitted(status = '', page = 1, limit = 20) {
     const statusFilter = status && validStatuses.includes(status) ? status : { $in: validStatuses };
     const [items, total] = await Promise.all([
         Course.find({ status: statusFilter, deletedAt: null })
-            .select('courseId title instructorId instructorName thumbnailUrl basePrice salePrice currency totalSections totalLessons totalDurationSec submittedAt')
+            .select('courseId title instructorId instructorName thumbnailUrl basePrice salePrice currency status totalSections totalLessons totalDurationSec submittedAt')
             .sort({ submittedAt: -1, createdAt: -1 })
             .skip(skip)
             .limit(limit),
@@ -151,7 +151,15 @@ async function findLessonsByCourse(courseId) {
 }
 
 async function findLessonById(lessonId) {
-    return Lesson.findOne({ lessonId });
+    // Try by UUID lessonId field first (correct usage)
+    const byUuid = await Lesson.findOne({ lessonId });
+    if (byUuid) return byUuid;
+    // Fallback: frontend may pass MongoDB _id instead of UUID
+    try {
+        return await Lesson.findById(lessonId);
+    } catch {
+        return null;
+    }
 }
 
 async function updateLesson(lessonId, data) {
@@ -180,6 +188,12 @@ async function createResource(data) {
 
 async function findResourcesByLesson(lessonId) {
     return LessonResource.find({ lessonId, deletedAt: null });
+}
+
+async function findResourcesByCourse(courseId) {
+    const lessons = await Lesson.find({ courseId });
+    const lessonIds = lessons.map(l => l.lessonId || l._id.toString());
+    return LessonResource.find({ lessonId: { $in: lessonIds }, deletedAt: null });
 }
 
 async function findResourceById(lessonResourceId) {
@@ -237,7 +251,7 @@ module.exports = {
     createLesson, findLessonsBySection, findLessonsByCourse, findLessonById,
     updateLesson, removeLesson, reorderLessons, findPreviewLessons,
     // LessonResource
-    createResource, findResourcesByLesson, findResourceById,
+    createResource, findResourcesByLesson, findResourcesByCourse, findResourceById,
     updateResource, softDeleteResource,
     // Coupon
     createCoupon, findCouponsByCourse, findCouponByCode, findCouponById,

@@ -87,10 +87,15 @@ async function reviewApplication(applicationId, status, reviewerId) {
     // If approved, create instructor profile
     if (status === 'APPROVED') {
         const displayName = application.data.fullName || 'Instructor';
-        await userRepo.createInstructorProfile({
+        const profileData = {
             userId: application.userId,
-            displayName
-        });
+            displayName,
+        };
+        // Copy ảnh từ đơn sang InstructorProfile
+        if (application.data.profileImageUrl) {
+            profileData.avatarUrl = application.data.profileImageUrl;
+        }
+        await userRepo.createInstructorProfile(profileData);
         await rabbitmq.publishEvent('instructor.approved', {
             userId: application.userId,
             displayName
@@ -119,8 +124,8 @@ async function listApplications(filter, page, limit) {
         ...result,
         items: result.items.map((item) => {
             const plainItem = typeof item.toObject === 'function' ? item.toObject() : item;
-            // Ưu tiên avatar instructor profile, fallback về user profile
-            const avatarUrl = instructorAvatarMap.get(item.userId) || userAvatarMap.get(item.userId) || '';
+            // Ưu tiên avatar instructor profile, fallback về user profile, rồi ảnh trong đơn
+            const avatarUrl = instructorAvatarMap.get(item.userId) || userAvatarMap.get(item.userId) || plainItem.data?.profileImageUrl || '';
             return { ...plainItem, avatarUrl };
         }),
     };
@@ -147,7 +152,6 @@ async function getInstructorProfile(userId) {
             educationLevel: appData.educationLevel || '',
             teachingTopics: appData.teachingTopics || [],
             portfolioUrl: appData.portfolioUrl || '',
-            certificateUrls: appData.certificateUrls || [],
             email: appData.email || '',
         };
     }
