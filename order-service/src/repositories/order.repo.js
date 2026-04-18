@@ -13,14 +13,16 @@ async function addToCart(studentId, item) {
     const cart = await getCart(studentId);
     return prisma.cartItem.upsert({
         where: { cartId_courseId: { cartId: cart.id, courseId: item.courseId } },
-        create: { id: uuidv4(),
+        create: {
+            id: uuidv4(),
             cart: { connect: { id: cart.id } },
             courseId: item.courseId,
             titleSnapshot: item.titleSnapshot,
+            thumbnailUrl: item.thumbnailUrl || null,
             priceSnapshot: item.priceSnapshot,
             instructorId: item.instructorId
         },
-        update: { priceSnapshot: item.priceSnapshot, titleSnapshot: item.titleSnapshot },
+        update: { priceSnapshot: item.priceSnapshot, titleSnapshot: item.titleSnapshot, thumbnailUrl: item.thumbnailUrl },
     });
 }
 

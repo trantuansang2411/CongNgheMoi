@@ -11,7 +11,7 @@ const instructorApplicationSchema = new mongoose.Schema({
         educationLevel: { type: String, trim: true, required: true }, // trình độ học vấn
         teachingTopics: { type: [String], default: [] }, // muốn dạy môn/chủ đề gì
         portfolioUrl: { type: String, trim: true, required: true }, // link portfolio/linkedin/github/website
-        certificateUrls: { type: [String], default: [] }, // ảnh hoặc file chứng chỉ nếu có
+        profileImageUrl: { type: String, default: null }, // ảnh profile/avatar của giảng viên khi apply
     },
     status: {
         type: String,

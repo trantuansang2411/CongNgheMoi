@@ -24,6 +24,7 @@ model CartItem {
   cartId        String   @map("cart_id") @db.Uuid
   courseId       String   @map("course_id") @db.Uuid
   titleSnapshot String   @map("title_snapshot")
+  thumbnailUrl  String?  @map("thumbnail_url")
   priceSnapshot Decimal  @map("price_snapshot") @db.Decimal(12, 0)
   instructorId  String?  @map("instructor_id") @db.Uuid
   addedAt       DateTime @default(now()) @map("added_at") @db.Timestamptz()

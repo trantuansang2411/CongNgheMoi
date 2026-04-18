@@ -72,8 +72,8 @@ message ApplicationData {
   string education_level = 6;
   repeated string teaching_topics = 7;
   string portfolio_url = 8;
-  repeated string certificate_urls = 9;
   string email = 10;
+  string profile_image_url = 11;
 }
 
 message ApplicationDetail {

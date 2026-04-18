@@ -32,6 +32,7 @@ async function getCourseBasicInfo(call, callback) {
             status: course.status,
             basePrice: course.basePrice || 0,
             salePrice: course.salePrice || 0,
+            thumbnailUrl: course.thumbnailUrl || '',
         });
     } catch (err) {
         callback({ code: grpc.status.NOT_FOUND, message: err.message });
@@ -54,6 +55,7 @@ async function listSubmittedCourses(call, callback) {
                 basePrice: course.basePrice || 0,
                 salePrice: course.salePrice || 0,
                 currency: course.currency || 'VND',
+                status: course.status || 'DRAFT',
                 totalSections: course.totalSections || 0,
                 totalLessons: course.totalLessons || 0,
                 totalDurationSec: course.totalDurationSec || 0,
@@ -112,6 +114,14 @@ async function getCourseReviewDetail(call, callback) {
                 durationSec: lesson.durationSec || 0,
                 isPreview: !!lesson.isPreview,
                 videoUrl: lesson.videoUrl || '',
+            })),
+            resources: (detail.resources || []).map((r) => ({
+                id: r._id.toString(),
+                resourceId: r.resourceId || '',
+                lessonId: r.lessonId || '',
+                title: r.name || r.title || '',
+                type: r.type || 'LINK',
+                url: r.url || '',
             })),
         });
     } catch (err) {

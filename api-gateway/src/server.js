@@ -62,8 +62,10 @@ const services = {
 };
 
 // Create proxy routes — prepend the mount path back since Express strips it
+const uploadRoutes = ['/uploads', '/course-uploads'];
+
 Object.entries(services).forEach(([routePath, config]) => {
-    const isUploadRoute = routePath.includes('/api/v1/courses') || routePath.includes('/api/v1/users') || routePath.includes('/uploads');
+    const isUploadRoute = uploadRoutes.includes(routePath);
     const uploadTimeout = 5 * 60 * 1000; // 5 minutes for uploads
     const defaultTimeout = 30000;
     const timeoutMs = isUploadRoute ? uploadTimeout : defaultTimeout;

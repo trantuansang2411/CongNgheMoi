@@ -1,6 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { randomUUID } = require('crypto');
 
 const UPLOAD_DIR = path.join(__dirname, '../../uploads');
 
@@ -20,7 +21,7 @@ function createUpload(subfolder, allowedRegex, maxSize) {
         filename: (req, file, cb) => {
             const ext = path.extname(file.originalname).toLowerCase() || '';
             const userId = req.user?.id || 'unknown';
-            const name = `${userId}_${Date.now()}${ext}`;
+            const name = `${userId}_${randomUUID()}${ext}`;
             cb(null, name);
         },
     });

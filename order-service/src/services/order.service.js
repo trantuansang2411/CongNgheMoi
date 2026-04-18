@@ -43,6 +43,7 @@ async function addToCart(studentId, courseId) {
     return orderRepo.addToCart(studentId, {
         courseId,
         titleSnapshot: courseInfo.title,
+        thumbnailUrl: courseInfo.thumbnailUrl || null,
         priceSnapshot,
         instructorId: courseInfo.instructorId || null,
     });
@@ -53,7 +54,7 @@ async function removeFromCart(studentId, courseId) {
 }
 
 // ========== CHECKOUT ==========
-async function checkout(studentId, { couponCode, couponCourseId, paymentProvider}) {
+async function checkout(studentId, { couponCode, couponCourseId, paymentProvider }) {
     const cart = await orderRepo.getCart(studentId);
     if (!cart.items || cart.items.length === 0) throw new BadRequestError('Cart is empty');
 
@@ -121,8 +122,8 @@ async function checkout(studentId, { couponCode, couponCourseId, paymentProvider
         paymentIntentId: paymentResult.paymentIntentId,
         ...(paymentResult.status === 'SUCCEEDED' ? { paidAt: new Date() } : {}),
     });
-//thanh toán thành công, chúng ta sẽ cập nhật trạng thái của đơn hàng thành 'PAID', 
-// xóa giỏ hàng của người dùng và xuất bản sự kiện 'order.paid' với thông tin chi tiết về đơn hàng và các khóa học đã mua. 
+    //thanh toán thành công, chúng ta sẽ cập nhật trạng thái của đơn hàng thành 'PAID', 
+    // xóa giỏ hàng của người dùng và xuất bản sự kiện 'order.paid' với thông tin chi tiết về đơn hàng và các khóa học đã mua. 
     if (paymentResult.status === 'SUCCEEDED') {
         await orderRepo.clearCart(studentId);
         await publishEvent('order.paid', {

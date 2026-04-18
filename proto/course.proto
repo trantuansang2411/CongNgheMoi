@@ -35,6 +35,7 @@ message CourseBasicInfoResponse {
   string status = 5;
   double base_price = 6;
   double sale_price = 7;
+  string thumbnail_url = 8;
 }
 
 message ListSubmittedCoursesRequest {
@@ -52,10 +53,11 @@ message SubmittedCourseItem {
   double base_price = 6;
   double sale_price = 7;
   string currency = 8;
-  int32 total_sections = 9;
-  int32 total_lessons = 10;
-  int32 total_duration_sec = 11;
-  string submitted_at = 12;
+  string status = 9;
+  int32 total_sections = 10;
+  int32 total_lessons = 11;
+  int32 total_duration_sec = 12;
+  string submitted_at = 13;
 }
 
 message ListSubmittedCoursesResponse {
@@ -112,10 +114,20 @@ message CourseReviewLesson {
   string video_url = 8;
 }
 
+message CourseReviewResource {
+  string id = 1;
+  string resource_id = 2;
+  string lesson_id = 3;
+  string title = 4;
+  string type = 5;
+  string url = 6;
+}
+
 message CourseReviewDetailResponse {
   CourseReviewInfo course = 1;
   repeated CourseReviewSection sections = 2;
   repeated CourseReviewLesson lessons = 3;
+  repeated CourseReviewResource resources = 4;
 }
 
 message MarkCourseNeedsFixesRequest {
