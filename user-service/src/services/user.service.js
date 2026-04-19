@@ -3,12 +3,28 @@ const logger = require('../../shared/utils/logger');
 const { NotFoundError, BadRequestError, ConflictError } = require('../../shared/utils/errors');
 const rabbitmq = require('../../shared/events/rabbitmq');
 
-async function getProfile(userId) {
+async function getProfile(userId, email = '') {
     const profile = await userRepo.findProfileByUserId(userId);
-    if (!profile) {
-        throw new NotFoundError('Profile not found');
+    if (profile) {
+        return profile;
     }
-    return profile;
+
+    // Self-heal missing profile when user.created event was missed.
+    const safeEmail = typeof email === 'string' ? email.trim() : '';
+    const fallbackName = safeEmail.includes('@') ? safeEmail.split('@')[0] : 'User';
+
+    try {
+        const createdProfile = await userRepo.createProfile({ userId, fullName: fallbackName });
+        logger.warn(`Profile auto-created on /me read for user: ${userId}`);
+        return createdProfile;
+    } catch (err) {
+        if (err?.code === 11000) {
+            // Another worker created it first.
+            const existing = await userRepo.findProfileByUserId(userId);
+            if (existing) return existing;
+        }
+        throw err;
+    }
 }
 
 // Được gọi từ RabbitMQ event handler khi Auth Service tạo account mới
