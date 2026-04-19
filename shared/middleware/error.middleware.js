@@ -1,12 +1,14 @@
 const logger = require('../utils/logger');
-const multer = require('multer');
+
+let multer;
+try { multer = require('multer'); } catch (_) { multer = null; }
 
 function errorHandler(err, req, res, _next) { // Đây là middleware xử lý lỗi tập trung.
-    // Đặt tên là _next để báo hiệu rằng tham số này không được sử dụng 
+    // Đặt tên là _next để báo hiệu rằng tham số này không được sử dụng
     // để tránh warning như: 'next' is defined but never used
 
     // Xử lý lỗi Multer (upload file)
-    if (err instanceof multer.MulterError) {
+    if (multer && err instanceof multer.MulterError) {
         const messages = {
             LIMIT_FILE_SIZE: 'File quá lớn. Vui lòng chọn file nhỏ hơn 10MB.',
             LIMIT_UNEXPECTED_FILE: 'Field upload không hợp lệ.',

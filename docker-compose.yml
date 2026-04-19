@@ -92,7 +92,7 @@ services:
       context: .
       dockerfile: api-gateway/Dockerfile
     ports:
-      - "${API_GATEWAY_PORT:-3000}:3000"
+      - "${API_GATEWAY_PORT:-4000}:4000"
     env_file: .env
     networks:
       - app-network
@@ -139,7 +139,7 @@ services:
     networks:
       - app-network
     volumes:
-      - upload_data:/app/uploads
+      - ./user-service/uploads:/app/uploads
     healthcheck:
       test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3002/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
       interval: 15s
@@ -161,6 +161,8 @@ services:
         condition: service_healthy
     networks:
       - app-network
+    volumes:
+      - ./course-service/uploads:/app/uploads
     healthcheck:
       test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3003/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
       interval: 15s
@@ -360,7 +362,6 @@ volumes:
   mongo_data:
   redis_data:
   rabbitmq_data:
-  upload_data:
 
 
 networks:

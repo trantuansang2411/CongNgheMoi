@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const errorHandler = require('../shared/middleware/error.middleware');
@@ -9,7 +10,7 @@ const authRepo = require('./repositories/auth.repo');
 const app = express();
 
 app.use(helmet());
-app.use(cors());
+// Không dùng cors() — gateway đã quản lý CORS
 app.use(express.json());
 app.use(morgan('dev'));
 

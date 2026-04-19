@@ -5,14 +5,14 @@ async function register(req, res, next) {
         const result = await authService.register(req.body);
         res.status(201).json({ success: true, data: result });
     } catch (err) {
-        next(err); // khi mà next(err) thì err sẽ được chuyển sang middleware error để xử lý nghĩa là Nhảy thẳng tới middleware có đủ 4 tham số: (err, req, res, next)
+        next(err);
     }
 }
 
 async function verifyRegistrationOtp(req, res, next) {
     try {
         const result = await authService.verifyRegistrationOtp(req.body);
-        res.json({ success: true, data: result });
+        res.json({ success: true, data: { user: result.user, accessToken: result.accessToken, refreshToken: result.refreshToken } });
     } catch (err) {
         next(err);
     }
@@ -30,7 +30,7 @@ async function resendRegistrationOtp(req, res, next) {
 async function login(req, res, next) {
     try {
         const result = await authService.login(req.body);
-        res.json({ success: true, data: result }); // Nếu không gọi res.status() thì Express mặc định: 200 OK
+        res.json({ success: true, data: { user: result.user, accessToken: result.accessToken, refreshToken: result.refreshToken } });
     } catch (err) {
         next(err);
     }
@@ -39,7 +39,7 @@ async function login(req, res, next) {
 async function googleLogin(req, res, next) {
     try {
         const result = await authService.googleLogin(req.body);
-        res.json({ success: true, data: result });
+        res.json({ success: true, data: { user: result.user, accessToken: result.accessToken, refreshToken: result.refreshToken } });
     } catch (err) {
         next(err);
     }
@@ -47,9 +47,9 @@ async function googleLogin(req, res, next) {
 
 async function refreshToken(req, res, next) {
     try {
-        const { refreshToken } = req.body;
-        const result = await authService.refreshAccessToken(refreshToken);
-        res.json({ success: true, data: result });
+        const token = req.body?.refreshToken;
+        const result = await authService.refreshAccessToken(token);
+        res.json({ success: true, data: { accessToken: result.accessToken, refreshToken: result.refreshToken } });
     } catch (err) {
         next(err);
     }
@@ -57,8 +57,8 @@ async function refreshToken(req, res, next) {
 
 async function logout(req, res, next) {
     try {
-        const { refreshToken } = req.body;
-        await authService.logout(refreshToken);
+        const token = req.body?.refreshToken;
+        await authService.logout(token);
         res.json({ success: true, message: 'Logged out successfully' });
     } catch (err) {
         next(err);
@@ -94,4 +94,3 @@ module.exports = {
     forgotPassword,
     resetPassword,
 };
-

@@ -19,6 +19,12 @@ async function updateProfile(req, res, next) {
 async function applyInstructor(req, res, next) {
     try {
         const dataWithEmail = { ...req.body, email: req.user.email || '' };
+
+        // If file uploaded, add profileImageUrl
+        if (req.file) {
+            dataWithEmail.profileImageUrl = `/uploads/instructor-applications/${req.file.filename}`;
+        }
+
         const application = await userService.applyInstructor(req.user.id, dataWithEmail);
         res.status(201).json({ success: true, data: application });
     } catch (err) { next(err); }

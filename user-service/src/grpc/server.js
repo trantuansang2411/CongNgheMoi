@@ -79,8 +79,8 @@ function mapApplicationData(data = {}) {
         educationLevel: data.educationLevel || '',
         teachingTopics: Array.isArray(data.teachingTopics) ? data.teachingTopics : [],
         portfolioUrl: data.portfolioUrl || '',
-        certificateUrls: Array.isArray(data.certificateUrls) ? data.certificateUrls : [],
         email: data.email || '',
+        profileImageUrl: data.profileImageUrl || '',
     };
 }
 
@@ -93,6 +93,7 @@ async function getApplication(call, callback) {
             userId: application.userId,
             data: mapApplicationData(application.data),
             status: application.status,
+            avatarUrl: application.avatarUrl || '',
             reviewerId: application.reviewerId || '',
             reviewedAt: application.reviewedAt ? application.reviewedAt.toISOString() : '',
             createdAt: application.createdAt ? application.createdAt.toISOString() : '',

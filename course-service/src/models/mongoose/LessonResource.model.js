@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { resource } = require('../../app');
 const { v4: uuidv4 } = require('uuid');
 const lessonResourceSchema = new mongoose.Schema({
     lessonId: { type: String, required: true, index: true },

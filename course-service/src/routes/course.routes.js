@@ -1,7 +1,13 @@
 const { Router } = require('express');
 const ctrl = require('../controllers/course.controller');
 const { authenticate, authorize } = require('../../shared/middleware/auth.middleware');
+const { uploadVideo, uploadResource, uploadThumbnail } = require('../middleware/upload');
 const router = Router();
+
+// ============ UPLOAD ============
+router.post('/upload/video', authenticate, authorize('INSTRUCTOR'), uploadVideo.single('file'), ctrl.uploadVideoFile);
+router.post('/upload/resource', authenticate, authorize('INSTRUCTOR'), uploadResource.single('file'), ctrl.uploadResourceFile);
+router.post('/upload/thumbnail', authenticate, authorize('INSTRUCTOR'), uploadThumbnail.single('file'), ctrl.uploadThumbnailFile);
 
 // ============ COURSE (Public) ============
 router.get('/published', ctrl.getPublishedCourses);

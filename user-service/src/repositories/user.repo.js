@@ -54,6 +54,10 @@ async function findInstructorProfile(userId) {
     return InstructorProfile.findOne({ userId });
 }
 
+async function findInstructorProfilesByUserIds(userIds) {
+    return InstructorProfile.find({ userId: { $in: userIds } }).select('userId avatarUrl');
+}
+
 async function createInstructorProfile(data) {
     return InstructorProfile.create(data);
 }
@@ -77,6 +81,7 @@ module.exports = {
     updateApplicationStatus,
     listApplications,
     findInstructorProfile,
+    findInstructorProfilesByUserIds,
     createInstructorProfile,
     updateInstructorProfile,
     updateInstructorStatus,

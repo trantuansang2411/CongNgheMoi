@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+
 const helmet = require('helmet');
 const morgan = require('morgan');
 const { createProxyMiddleware } = require('http-proxy-middleware');
@@ -11,13 +11,25 @@ const app = express();
 
 // Security
 app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(cors());
+// CORS thủ công — cors() middleware conflict với http-proxy-middleware v3
+const ALLOWED_ORIGIN = process.env.FRONTEND_URL || 'http://localhost:5173';
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    if (req.method === 'OPTIONS') {
+        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+        res.setHeader('Access-Control-Max-Age', '86400');
+        return res.status(204).end();
+    }
+    next();
+});
 app.use(morgan('dev', { skip: (req) => req.path === '/health' }));
 
 // Rate limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: 1000,
     standardHeaders: true,
     legacyHeaders: false,
     message: { success: false, error: { code: 'RATE_LIMIT', message: 'Too many requests' } },
@@ -46,16 +58,29 @@ const services = {
     '/api/v1/notifications': { target: `http://${process.env.NOTIFICATION_SERVICE_HOST || 'localhost'}:${process.env.NOTIFICATION_SERVICE_PORT || 3011}` },
     '/api/v1/admin': { target: `http://${process.env.ADMIN_SERVICE_HOST || 'localhost'}:${process.env.ADMIN_SERVICE_PORT || 3012}` },
     '/uploads': { target: `http://${process.env.USER_SERVICE_HOST || 'localhost'}:${process.env.USER_SERVICE_PORT || 3002}` },
+    '/course-uploads': { target: `http://${process.env.COURSE_SERVICE_HOST || 'localhost'}:${process.env.COURSE_SERVICE_PORT || 3003}` },
 };
 
 // Create proxy routes — prepend the mount path back since Express strips it
+const uploadRoutes = ['/uploads', '/course-uploads'];
+
 Object.entries(services).forEach(([routePath, config]) => {
+    const isUploadRoute = uploadRoutes.includes(routePath);
+    const uploadTimeout = 5 * 60 * 1000; // 5 minutes for uploads
+    const defaultTimeout = 30000;
+    const timeoutMs = isUploadRoute ? uploadTimeout : defaultTimeout;
     app.use(routePath, createProxyMiddleware({
         target: config.target,
         changeOrigin: true,
-        timeout: 30000,
-        proxyTimeout: 30000,
+        timeout: timeoutMs,
+        proxyTimeout: timeoutMs,
         pathRewrite: (path) => routePath + path,
+        onProxyRes: (proxyRes) => {
+            // http-proxy-middleware v3: delete không hoạt động đúng, phải overwrite
+            const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+            proxyRes.headers['access-control-allow-origin'] = allowedOrigin;
+            proxyRes.headers['access-control-allow-credentials'] = 'true';
+        },
         onError: (err, req, res) => {
             logger.error(`Proxy error for ${routePath}:`, err.message);
             res.status(502).json({ success: false, error: { code: 'BAD_GATEWAY', message: 'Service unavailable' } });
@@ -68,7 +93,7 @@ app.use((req, res) => {
     res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Route not found' } });
 });
 
-const PORT = process.env.API_GATEWAY_PORT || 3000;
+const PORT = process.env.API_GATEWAY_PORT || 4000;
 app.listen(PORT, () => {
     logger.info(`API Gateway running on port ${PORT}`);
 });

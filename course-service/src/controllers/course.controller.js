@@ -85,6 +85,25 @@ const reorderLessons = async (req, res, next) => {
     try { res.json({ success: true, data: await svc.reorderLessons(req.params.courseId, req.params.sectionId, req.user.id, req.body.orderedIds) }); } catch (e) { next(e); }
 };
 
+// ============ UPLOAD ============
+const uploadVideoFile = (req, res) => {
+    if (!req.file) return res.status(400).json({ success: false, error: { message: 'Không có file được upload.' } });
+    const url = `/course-uploads/videos/${req.file.filename}`;
+    res.json({ success: true, data: { url } });
+};
+
+const uploadResourceFile = (req, res) => {
+    if (!req.file) return res.status(400).json({ success: false, error: { message: 'Không có file được upload.' } });
+    const url = `/course-uploads/resources/${req.file.filename}`;
+    res.json({ success: true, data: { url } });
+};
+
+const uploadThumbnailFile = (req, res) => {
+    if (!req.file) return res.status(400).json({ success: false, error: { message: 'Không có file được upload.' } });
+    const url = `/course-uploads/thumbnails/${req.file.filename}`;
+    res.json({ success: true, data: { url } });
+};
+
 module.exports = {
     createCourse, getCourse, getInstructorCourses, getPublishedCourses, getAllCategories,
     updateCourse, deleteCourse, submitCourse, previewCourse,
@@ -92,4 +111,5 @@ module.exports = {
     createLesson, getLessons, updateLesson, deleteLesson, reorderLessons,
     addResource, getResources, deleteResource,
     createCoupon, getCoupons, deleteCoupon,
+    uploadVideoFile, uploadResourceFile, uploadThumbnailFile,
 };
