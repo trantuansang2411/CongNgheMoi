@@ -8,6 +8,7 @@ const router = Router();
 router.post('/upload/video', authenticate, authorize('INSTRUCTOR'), uploadVideo.single('file'), ctrl.uploadVideoFile);
 router.post('/upload/resource', authenticate, authorize('INSTRUCTOR'), uploadResource.single('file'), ctrl.uploadResourceFile);
 router.post('/upload/thumbnail', authenticate, authorize('INSTRUCTOR'), uploadThumbnail.single('file'), ctrl.uploadThumbnailFile);
+router.delete('/upload', authenticate, authorize('INSTRUCTOR'), ctrl.deleteUploadedFile);
 
 // ============ COURSE (Public) ============
 router.get('/published', ctrl.getPublishedCourses);

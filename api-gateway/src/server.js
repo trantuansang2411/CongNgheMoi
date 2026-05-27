@@ -93,7 +93,7 @@ app.use((req, res) => {
     res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Route not found' } });
 });
 
-const PORT = process.env.API_GATEWAY_PORT || 4000;
+const PORT = process.env.API_GATEWAY_PORT || 3000;
 app.listen(PORT, () => {
     logger.info(`API Gateway running on port ${PORT}`);
 });

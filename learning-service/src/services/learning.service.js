@@ -68,6 +68,7 @@ async function getPlayerCourseDetail(studentId, courseId) {
             courseId,
             instructorId: snapshot.instructorId || '',
             title: snapshot.title || enrollment.titleSnapshot || '',
+            thumbnailUrl: snapshot.thumbnailUrl || '',
             basePrice: 0,
         },
         sections: (snapshot.sections || []).map((s) => ({
@@ -331,7 +332,7 @@ async function handleOrderPaid(data) {
  */
 async function handleCoursePublished(data) {
     const {
-        courseId, title, slug, instructorId,
+        courseId, title, slug, instructorId, thumbnailUrl,
         totalLessons, totalDurationSec, publishedAt,
         sections = [], lessons = [],
     } = data;
@@ -340,6 +341,7 @@ async function handleCoursePublished(data) {
         { courseId },
         {
             courseId, title, slug, instructorId,
+            thumbnailUrl: thumbnailUrl || '',
             totalLessons: totalLessons || 0,
             totalDurationSec: totalDurationSec || 0,
             publishedAt: publishedAt ? new Date(publishedAt) : new Date(),

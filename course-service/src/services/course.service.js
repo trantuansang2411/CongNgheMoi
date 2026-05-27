@@ -22,6 +22,10 @@ function deleteLocalFile(fileUrl) {
     }
 }
 
+function deleteUploadedFile(url) {
+    deleteLocalFile(url);
+}
+
 // ============ COURSE ============
 async function handleInstructorData(userId, displayName) {
     await repo.upsertInstructorProfile(userId, displayName);
@@ -31,10 +35,7 @@ async function handleInstructorData(userId, displayName) {
 
 async function createCourse(instructorId, data) {
     const cached = await repo.findInstructorProfile(instructorId);
-    if (!cached) {
-        throw new NotFoundError('Instructor profile not found');
-    }
-    const instructorName = cached ? cached.displayName : '';
+    const instructorName = cached?.displayName || '';
     const course = await repo.createCourse({ ...data, instructorId, instructorName });
     logger.info(`Course created: ${course.courseId}`);
     return course;
@@ -410,5 +411,7 @@ module.exports = {
     createCoupon, getCoupons, validateCoupon, deleteCoupon,
     // Instructor cache
     handleInstructorData,
+    // Upload cleanup
+    deleteUploadedFile,
 };
 

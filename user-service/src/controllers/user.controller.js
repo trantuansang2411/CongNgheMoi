@@ -4,7 +4,7 @@ const fs = require('fs');
 
 async function getProfile(req, res, next) {
     try {
-        const profile = await userService.getProfile(req.user.id);
+        const profile = await userService.getProfile(req.user.id, req.user.email);
         res.json({ success: true, data: profile });
     } catch (err) { next(err); }
 }
