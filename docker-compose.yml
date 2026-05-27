@@ -92,12 +92,12 @@ services:
       context: .
       dockerfile: api-gateway/Dockerfile
     ports:
-      - "${API_GATEWAY_PORT:-4000}:4000"
+      - "${API_GATEWAY_PORT:-3000}:${API_GATEWAY_PORT:-3000}"
     env_file: .env
     networks:
       - app-network
     healthcheck:
-      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3000/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:${API_GATEWAY_PORT:-3000}/health', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))" ]
       interval: 15s
       timeout: 5s
       retries: 3

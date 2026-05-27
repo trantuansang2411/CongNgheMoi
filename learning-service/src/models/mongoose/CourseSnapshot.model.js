@@ -7,6 +7,7 @@ const courseSnapshotSchema = new mongoose.Schema({
     title: { type: String, default: '' },
     slug: { type: String, default: '' },
     instructorId: { type: String, default: '' },
+    thumbnailUrl: { type: String, default: '' },
     totalLessons: { type: Number, default: 0 },
     totalDurationSec: { type: Number, default: 0 },
 

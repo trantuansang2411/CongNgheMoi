@@ -104,6 +104,12 @@ const uploadThumbnailFile = (req, res) => {
     res.json({ success: true, data: { url } });
 };
 
+const deleteUploadedFile = (req, res) => {
+    const { url } = req.body || {};
+    svc.deleteUploadedFile(url);
+    res.json({ success: true });
+};
+
 module.exports = {
     createCourse, getCourse, getInstructorCourses, getPublishedCourses, getAllCategories,
     updateCourse, deleteCourse, submitCourse, previewCourse,
@@ -111,5 +117,5 @@ module.exports = {
     createLesson, getLessons, updateLesson, deleteLesson, reorderLessons,
     addResource, getResources, deleteResource,
     createCoupon, getCoupons, deleteCoupon,
-    uploadVideoFile, uploadResourceFile, uploadThumbnailFile,
+    uploadVideoFile, uploadResourceFile, uploadThumbnailFile, deleteUploadedFile,
 };
