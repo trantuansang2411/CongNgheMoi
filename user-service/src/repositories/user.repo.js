@@ -29,11 +29,13 @@ async function findApplicationByUserId(userId) {
 }
 
 async function findApplicationById(userId) {
-    return InstructorApplication.findOne({ userId });
+    return InstructorApplication.findOne({ userId }).sort({ createdAt: -1 });
 }
 
 async function updateApplicationStatus(userId, status, reviewerId) {
-    return InstructorApplication.findOneAndUpdate({ userId }, {
+    const latest = await InstructorApplication.findOne({ userId }).sort({ createdAt: -1 });
+    if (!latest) return null;
+    return InstructorApplication.findOneAndUpdate({ _id: latest._id }, {
         status,
         reviewerId,
         reviewedAt: new Date(),

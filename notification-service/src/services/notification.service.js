@@ -92,6 +92,18 @@ async function handleInstructorApproved(data) {
     logger.info(`Notification: INSTRUCTOR_APPROVED for user=${userId}`);
 }
 
+async function handleInstructorRejected(data) {
+    const { userId } = data;
+    await createAndPublishNotification({
+        userId,
+        type: 'INSTRUCTOR_REJECTED',
+        title: 'Đơn xin giảng viên bị từ chối',
+        message: 'Đơn xin giảng viên của bạn đã bị từ chối. Vui lòng kiểm tra lại hồ sơ và thử lại.',
+        data: {},
+    });
+    logger.info(`Notification: INSTRUCTOR_REJECTED for user=${userId}`);
+}
+
 module.exports = {
     getNotifications,
     markRead,
@@ -101,4 +113,5 @@ module.exports = {
     handleCertificateIssued,
     handleCoursePublished,
     handleInstructorApproved,
+    handleInstructorRejected,
 };
