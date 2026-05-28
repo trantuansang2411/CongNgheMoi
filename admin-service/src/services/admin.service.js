@@ -1,5 +1,6 @@
 const grpcClients = require('../grpc/clients');
 const logger = require('../../shared/utils/logger');
+const rabbitmq = require('../../shared/events/rabbitmq');
 
 async function publishCourse(courseId) {
     const result = await grpcClients.publishCourse({ courseId });
@@ -63,6 +64,12 @@ async function approveInstructor(userId, reviewerId) {
         role: 'INSTRUCTOR',
     });
 
+    // 3. Gửi thông báo đến người dùng
+    await rabbitmq.publishEvent('instructor.approved', {
+        userId: result.userId || userId,
+        displayName: result.displayName || '',
+    });
+
     logger.info(`Admin: approved instructor ${userId}`);
     return { message: `Instructor ${userId} approved successfully` };
 }
@@ -73,6 +80,9 @@ async function rejectInstructor(userId, reviewerId) {
         status: 'REJECTED',
         reviewerId: reviewerId,
     });
+
+    await rabbitmq.publishEvent('instructor.rejected', { userId });
+
     logger.info(`Admin: rejected instructor application ${userId}`);
     return { message: `Instructor application ${userId} rejected` };
 }

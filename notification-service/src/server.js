@@ -29,6 +29,7 @@ async function start() {
         await rabbitmq.subscribe('notification-service', 'certificate.issued', (msg) => notificationService.handleCertificateIssued(msg.data));
         await rabbitmq.subscribe('notification-service', 'course.published', (msg) => notificationService.handleCoursePublished(msg.data));
         await rabbitmq.subscribe('notification-service', 'instructor.approved', (msg) => notificationService.handleInstructorApproved(msg.data));
+        await rabbitmq.subscribe('notification-service', 'instructor.rejected', (msg) => notificationService.handleInstructorRejected(msg.data));
         app.listen(PORT, () => logger.info(`Notification Service running on port ${PORT}`));
     } catch (err) {
         logger.error('Notification Service failed to start:', err.message);
