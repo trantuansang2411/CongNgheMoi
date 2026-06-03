@@ -33,7 +33,22 @@ async function getMyCourses(studentId, page = 1, limit = 20) {
         Enrollment.find({ studentId }).skip(skip).limit(limit).sort({ enrolledAt: -1 }).lean(),
         Enrollment.countDocuments({ studentId }),
     ]);
-    return { items, total, page, limit };
+
+    const courseIds = items.map((item) => item.courseId).filter(Boolean);
+    const snapshots = courseIds.length > 0
+        ? await CourseSnapshot.find({ courseId: { $in: courseIds } }).lean()
+        : [];
+    const snapshotByCourseId = new Map(snapshots.map((snapshot) => [snapshot.courseId, snapshot]));
+
+    return {
+        items: items.map((item) => ({
+            ...item,
+            thumbnailUrl: snapshotByCourseId.get(item.courseId)?.thumbnailUrl || '',
+        })),
+        total,
+        page,
+        limit,
+    };
 }
 
 /**

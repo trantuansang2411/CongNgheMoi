@@ -1,0 +1,567 @@
+{
+  "info": {
+    "name": "CNM Happy Path Flows",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000" },
+    { "key": "student_email", "value": "student+hp@test.com" },
+    { "key": "student_password", "value": "Test@123456" },
+    { "key": "student_otp", "value": "" },
+    { "key": "student_token", "value": "" },
+    { "key": "student_refresh_token", "value": "" },
+    { "key": "student_user_id", "value": "" },
+    { "key": "instructor_email", "value": "instructor+hp@test.com" },
+    { "key": "instructor_password", "value": "Test@123456" },
+    { "key": "instructor_otp", "value": "" },
+    { "key": "instructor_token", "value": "" },
+    { "key": "instructor_refresh_token", "value": "" },
+    { "key": "instructor_user_id", "value": "" },
+    { "key": "admin_email", "value": "admin+hp@test.com" },
+    { "key": "admin_password", "value": "Test@123456" },
+    { "key": "admin_otp", "value": "" },
+    { "key": "admin_token", "value": "" },
+    { "key": "admin_user_id", "value": "" },
+    { "key": "course_id", "value": "" },
+    { "key": "section_id", "value": "" },
+    { "key": "lesson_id", "value": "" },
+    { "key": "order_id", "value": "" },
+    { "key": "payment_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Happy Path Flow",
+      "item": [
+        {
+          "name": "Register Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/auth/register",
+            "description": "Registers a student account. OTP is sent to email."
+          }
+        },
+        {
+          "name": "Verify Student OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const data = body && body.data ? body.data : {};",
+                  "const user = data.user || {};",
+                  "pm.collectionVariables.set('student_token', data.accessToken || '');",
+                  "pm.collectionVariables.set('student_refresh_token', data.refreshToken || '');",
+                  "pm.collectionVariables.set('student_user_id', user.id || user._id || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"otp\": \"{{student_otp}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/auth/verify-registration-otp",
+            "description": "Fill {{student_otp}} from email, then verify to activate and get tokens."
+          }
+        },
+        {
+          "name": "Login Student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const data = body && body.data ? body.data : {};",
+                  "const user = data.user || {};",
+                  "pm.collectionVariables.set('student_token', data.accessToken || '');",
+                  "pm.collectionVariables.set('student_refresh_token', data.refreshToken || '');",
+                  "pm.collectionVariables.set('student_user_id', user.id || user._id || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "Register Instructor",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{instructor_email}}\",\n  \"password\": \"{{instructor_password}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/auth/register",
+            "description": "Registers an instructor account (initial role is STUDENT)."
+          }
+        },
+        {
+          "name": "Verify Instructor OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const data = body && body.data ? body.data : {};",
+                  "const user = data.user || {};",
+                  "pm.collectionVariables.set('instructor_token', data.accessToken || '');",
+                  "pm.collectionVariables.set('instructor_refresh_token', data.refreshToken || '');",
+                  "pm.collectionVariables.set('instructor_user_id', user.id || user._id || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{instructor_email}}\",\n  \"otp\": \"{{instructor_otp}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/auth/verify-registration-otp",
+            "description": "Fill {{instructor_otp}} from email, then verify to activate and get tokens."
+          }
+        },
+        {
+          "name": "Login Instructor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const data = body && body.data ? body.data : {};",
+                  "const user = data.user || {};",
+                  "pm.collectionVariables.set('instructor_token', data.accessToken || '');",
+                  "pm.collectionVariables.set('instructor_refresh_token', data.refreshToken || '');",
+                  "pm.collectionVariables.set('instructor_user_id', user.id || user._id || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{instructor_email}}\",\n  \"password\": \"{{instructor_password}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "Register Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/auth/register",
+            "description": "Registers an admin account. Assign ADMIN role in DB before admin login."
+          }
+        },
+        {
+          "name": "Verify Admin OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const data = body && body.data ? body.data : {};",
+                  "const user = data.user || {};",
+                  "pm.collectionVariables.set('admin_user_id', user.id || user._id || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"otp\": \"{{admin_otp}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/auth/verify-registration-otp",
+            "description": "Fill {{admin_otp}} from email, then verify to activate account."
+          }
+        },
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const data = body && body.data ? body.data : {};",
+                  "pm.collectionVariables.set('admin_token', data.accessToken || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/auth/login",
+            "description": "Ensure ADMIN role is assigned in DB before this step."
+          }
+        },
+        {
+          "name": "Apply Instructor",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{instructor_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyen Van A\",\n  \"birthDate\": \"1995-05-20\",\n  \"headline\": \"Senior Developer\",\n  \"experience\": \"10 years building web systems\",\n  \"expertise\": \"Node.js, React, Microservices\",\n  \"educationLevel\": \"Bachelor\",\n  \"teachingTopics\": [\"Backend\", \"Microservices\"],\n  \"portfolioUrl\": \"https://example.com/portfolio\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/users/instructor/apply"
+          }
+        },
+        {
+          "name": "Admin List Applications",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": "{{base_url}}/api/v1/admin/applications?status=PENDING&page=1&limit=20"
+          }
+        },
+        {
+          "name": "Admin Approve Instructor",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": "{{base_url}}/api/v1/admin/instructors/{{instructor_user_id}}/approve"
+          }
+        },
+        {
+          "name": "Instructor Re-Login (After Approval)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const data = body && body.data ? body.data : {};",
+                  "const user = data.user || {};",
+                  "pm.collectionVariables.set('instructor_token', data.accessToken || '');",
+                  "pm.collectionVariables.set('instructor_refresh_token', data.refreshToken || '');",
+                  "pm.collectionVariables.set('instructor_user_id', user.id || user._id || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{instructor_email}}\",\n  \"password\": \"{{instructor_password}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/auth/login",
+            "description": "Refresh token to include INSTRUCTOR role."
+          }
+        },
+        {
+          "name": "Create Course",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const course = body && body.data ? body.data : {};",
+                  "pm.collectionVariables.set('course_id', course.courseId || course.id || course._id || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{instructor_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Node.js Microservices Masterclass\",\n  \"description\": \"Build microservices with Node.js, Docker, and RabbitMQ\",\n  \"basePrice\": 500000,\n  \"salePrice\": 0,\n  \"currency\": \"VND\",\n  \"topicId\": \"web-development\",\n  \"thumbnailUrl\": \"https://example.com/thumbnail.jpg\",\n  \"requirements\": [\"Basic JavaScript\", \"Terminal basics\"],\n  \"objectives\": [\"Build microservices\", \"Deploy with Docker\"]\n}"
+            },
+            "url": "{{base_url}}/api/v1/courses"
+          }
+        },
+        {
+          "name": "Create Section",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const section = body && body.data ? body.data : {};",
+                  "pm.collectionVariables.set('section_id', section.sectionId || section.id || section._id || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{instructor_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Section 1: Intro\",\n  \"orderIndex\": 1\n}"
+            },
+            "url": "{{base_url}}/api/v1/courses/{{course_id}}/sections"
+          }
+        },
+        {
+          "name": "Create Lesson",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const lesson = body && body.data ? body.data : {};",
+                  "pm.collectionVariables.set('lesson_id', lesson.lessonId || lesson.id || lesson._id || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{instructor_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Lesson 1: Monolith vs Microservices\",\n  \"videoUrl\": \"https://example.com/video1.mp4\",\n  \"durationSec\": 1200,\n  \"orderIndex\": 1,\n  \"isPreview\": true\n}"
+            },
+            "url": "{{base_url}}/api/v1/courses/{{course_id}}/sections/{{section_id}}/lessons"
+          }
+        },
+        {
+          "name": "Submit Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{instructor_token}}" }
+            ],
+            "url": "{{base_url}}/api/v1/courses/{{course_id}}/submit"
+          }
+        },
+        {
+          "name": "Admin List Submitted Courses",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": "{{base_url}}/api/v1/admin/courses/submitted?status=SUBMITTED&page=1&limit=20"
+          }
+        },
+        {
+          "name": "Admin Course Review Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": "{{base_url}}/api/v1/admin/courses/{{course_id}}/review-detail"
+          }
+        },
+        {
+          "name": "Admin Publish Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": "{{base_url}}/api/v1/admin/courses/{{course_id}}/publish"
+          }
+        },
+        {
+          "name": "Instructor Dashboard - My Courses",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{instructor_token}}" }
+            ],
+            "url": "{{base_url}}/api/v1/courses/instructor/mine?page=1&limit=20"
+          }
+        },
+        {
+          "name": "Instructor Dashboard - My Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{instructor_token}}" }
+            ],
+            "url": "{{base_url}}/api/v1/users/instructor/me"
+          }
+        },
+        {
+          "name": "Student Add To Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{student_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": \"{{course_id}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/cart"
+          }
+        },
+        {
+          "name": "Student Checkout (MOCK)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const data = body && body.data ? body.data : {};",
+                  "const order = data.order || {};",
+                  "pm.collectionVariables.set('order_id', order.id || order._id || data.orderId || data.id || '');",
+                  "pm.collectionVariables.set('payment_id', data.paymentIntentId || data.paymentId || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{student_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentProvider\": \"MOCK\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/checkout"
+          }
+        },
+        {
+          "name": "Student Get Order",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": "{{base_url}}/api/v1/orders/{{order_id}}"
+          }
+        },
+        {
+          "name": "Student Enrollment Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": "{{base_url}}/api/v1/learning/enrollments/{{course_id}}"
+          }
+        },
+        {
+          "name": "Student Mark Lesson Complete",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{student_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lessonId\": \"{{lesson_id}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/learning/{{course_id}}/complete"
+          }
+        },
+        {
+          "name": "Student Record Watch Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{student_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lessonId\": \"{{lesson_id}}\",\n  \"deltaWatchSec\": 30\n}"
+            },
+            "url": "{{base_url}}/api/v1/learning/{{course_id}}/watch-session"
+          }
+        }
+      ]
+    }
+  ]
+}
