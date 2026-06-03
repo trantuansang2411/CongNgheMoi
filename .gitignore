@@ -4,3 +4,4 @@ node_modules/
 #ignore markdown files except for README.md
 !README.md
 *.md 
+k8s/
